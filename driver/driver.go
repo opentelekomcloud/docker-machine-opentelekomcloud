@@ -51,7 +51,7 @@ type Driver struct {
 	PrivateKeyFile   string
 	SecurityGroup    string
 	FloatingIPPool   string
-	FloatingIPPoolId string
+	FloatingIPPoolID string
 	Token            string
 	IPVersion        int
 	ConfigDrive      bool

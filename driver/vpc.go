@@ -5,9 +5,19 @@ import (
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/huaweicloud/golangsdk"
 	huaweisdk "github.com/huaweicloud/golangsdk/openstack"
+	"github.com/huaweicloud/golangsdk/openstack/networking/v1/subnets"
 	"github.com/huaweicloud/golangsdk/openstack/networking/v1/vpcs"
 	"time"
 )
+
+const (
+	vpcCIDR      = "192.168.0.0/24"
+	subnetCIDR   = "192.168.0.0/26"
+	primaryDNS   = "100.125.4.25"
+	secondaryDNS = "8.8.8.8"
+)
+
+var defaultDNS = []string{primaryDNS, secondaryDNS}
 
 // InitVPCService initializes VPC v1 service
 func (c *Client) InitVPCService(d *Driver) error {
@@ -25,19 +35,19 @@ func (c *Client) InitVPCService(d *Driver) error {
 	return nil
 }
 
-// CreateVPC creates new VPC by given VPC name
-func (c *Client) CreateVPC(d *Driver) (string, error) {
+// CreateVPC creates new VPC by d.VpcName
+func (c *Client) CreateVPC(d *Driver) error {
 	result, err := vpcs.Create(c.VPC, vpcs.CreateOpts{
 		Name: d.VpcName,
-		CIDR: "192.168.0.0/24",
+		CIDR: vpcCIDR,
 	}).Extract()
 
-	vpcID := ""
-	if result != nil {
-		vpcID = result.ID
+	if err != nil {
+		return err
 	}
-	return vpcID, err
-
+	d.VpcID = result.ID
+	d.VpcName = result.Name
+	return nil
 }
 
 // GetVPCDetails returns details of VPC
@@ -49,7 +59,7 @@ func (c *Client) GetVPCDetails(d *Driver) (*vpcs.Vpc, error) {
 	return result, nil
 }
 
-// ResolveVpcID resolves `Driver.VpcId` for given `Driver.VpcName`
+// ResolveVpcID resolves `Driver.VpcID` for given `Driver.VpcName`
 func (c *Client) ResolveVpcID(d *Driver) error {
 	if d.VpcID != "" {
 		return nil
@@ -88,4 +98,42 @@ func (c *Client) WaitForVPCStatus(d *Driver, status string) error {
 // DeleteVPC removes existing VPC
 func (c *Client) DeleteVPC(d *Driver) error {
 	return vpcs.Delete(c.VPC, d.VpcID).Err
+}
+
+// CreateSubnet creates new Subnet and set Driver.SubnetID
+func (c *Client) CreateSubnet(d *Driver) error {
+	result, err := subnets.Create(c.VPC, subnets.CreateOpts{
+		Name:    d.VpcName,
+		CIDR:    subnetCIDR,
+		DnsList: defaultDNS,
+	}).Extract()
+	if err != nil {
+		return err
+	}
+	d.SubnetID = result.ID
+	return nil
+}
+
+// ResolveVpcSubnet resolves `Driver.SubnetID` for given `Driver.SubnetName`
+func (c *Client) ResolveVpcSubnet(d *Driver) error {
+	if d.SubnetID != "" {
+		return nil
+	}
+	err := c.ResolveVpcID(d)
+	if err != nil {
+		return err
+	}
+	subnetList, err := subnets.List(c.VPC, subnets.ListOpts{
+		Name:   d.SubnetName,
+		VPC_ID: d.VpcID,
+	})
+	if err != nil {
+		return err
+	}
+	if len(subnetList) > 1 {
+		return fmt.Errorf("multiple Subnets found by name %s in VPC %s. "+
+			"Please provide Subnet ID instead", d.SubnetName, d.VpcID)
+	}
+	d.SubnetName = subnetList[0].Name
+	return nil
 }
