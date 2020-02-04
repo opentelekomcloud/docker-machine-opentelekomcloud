@@ -21,6 +21,14 @@ vet:
 		exit 1; \
 	fi
 
-build:
-	@echo Build driver
-	@go build -o bin/docker-machine-driver-opentelecomcloud
+build: build-linux
+
+build-linux:
+	@echo "Build driver for Linux"
+	@go build --trimpath -o bin/docker-machine-driver-opentelecomcloud
+
+build-windows:
+	@echo "Build driver for Windows"
+	@GOOS=windows go build --trimpath -o bin/docker-machine-driver-opentelecomcloud.exe
+
+build-all: build-linux build-windows
