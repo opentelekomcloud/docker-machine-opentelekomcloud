@@ -13,7 +13,6 @@ require (
 	github.com/gophercloud/utils v0.0.0-20200104035643-cb37ab634bff
 	github.com/huaweicloud/golangsdk v0.0.0-20200122065641-034e66c4f159
 	github.com/kr/pretty v0.2.0 // indirect
-	github.com/sirupsen/logrus v1.4.2 // indirect
 	github.com/stretchr/testify v1.4.0 // indirect
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d // indirect
 )
