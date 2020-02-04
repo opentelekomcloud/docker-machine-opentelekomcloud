@@ -13,13 +13,14 @@ import (
 	"time"
 )
 
+// InitCompute initializes Compute v2 service
 func (c *Client) InitCompute(d *Driver) error {
 	if c.ComputeV2 != nil {
 		return nil
 	}
 	compute, err := openstack.NewComputeV2(c.OSProvider, gophercloud.EndpointOpts{
 		Region:       d.Region,
-		Availability: getEndpointType(d.EndpointType),
+		Availability: gophercloud.Availability(getEndpointType(d.EndpointType)),
 	})
 	if err != nil {
 		return err
@@ -28,18 +29,19 @@ func (c *Client) InitCompute(d *Driver) error {
 	return nil
 }
 
+// CreateInstance creates new ECS
 func (c *Client) CreateInstance(d *Driver) (string, error) {
 
 	serverOpts := servers.CreateOpts{
 		Name:             d.MachineName,
-		FlavorRef:        d.FlavorId,
-		ImageRef:         d.ImageId,
+		FlavorRef:        d.FlavorID,
+		ImageRef:         d.ImageID,
 		SecurityGroups:   []string{d.SecurityGroup},
 		AvailabilityZone: d.AvailabilityZone,
 	}
 
-	if d.SubnetId != "" {
-		serverOpts.Networks = []servers.Network{{UUID: d.SubnetId}}
+	if d.SubnetID != "" {
+		serverOpts.Networks = []servers.Network{{UUID: d.SubnetID}}
 	}
 
 	server, err := servers.Create(c.ComputeV2, keypairs.CreateOptsExt{
@@ -54,47 +56,54 @@ func (c *Client) CreateInstance(d *Driver) (string, error) {
 	return server.ID, nil
 }
 
-func (c *Client) GetServerDetail(d *Driver) (*servers.Server, error) {
-	server, err := servers.Get(c.ComputeV2, d.MachineId).Extract()
+// GetServerDetails returns details of ECS
+func (c *Client) GetServerDetails(d *Driver) (*servers.Server, error) {
+	server, err := servers.Get(c.ComputeV2, d.MachineID).Extract()
 	if err != nil {
 		return nil, err
 	}
 	return server, nil
 }
 
+// StartInstance starts existing ECS instance
 func (c *Client) StartInstance(d *Driver) error {
-	return startstop.Start(c.ComputeV2, d.MachineId).Err
+	return startstop.Start(c.ComputeV2, d.MachineID).Err
 }
 
+// StopInstance stops existing ECS instance
 func (c *Client) StopInstance(d *Driver) error {
-	return startstop.Stop(c.ComputeV2, d.MachineId).Err
+	return startstop.Stop(c.ComputeV2, d.MachineID).Err
 }
 
+// RestartInstance restarts ECS instance
 func (c *Client) RestartInstance(d *Driver) error {
 	opts := &servers.RebootOpts{Type: servers.SoftReboot}
-	return servers.Reboot(c.ComputeV2, d.MachineId, opts).Err
+	return servers.Reboot(c.ComputeV2, d.MachineID, opts).Err
 }
 
+// DeleteInstance removes existing ECS instance
 func (c *Client) DeleteInstance(d *Driver) error {
-	return servers.Delete(c.ComputeV2, d.MachineId).Err
+	return servers.Delete(c.ComputeV2, d.MachineID).Err
 }
 
+// WaitForInstanceStatus waits for instance to be in given status
 func (c *Client) WaitForInstanceStatus(d *Driver, status string) error {
 	return mcnutils.WaitForSpecificOrError(func() (b bool, err error) {
-		current, err := servers.Get(c.ComputeV2, d.MachineId).Extract()
+		current, err := servers.Get(c.ComputeV2, d.MachineID).Extract()
 		if err != nil {
 			return true, err
 		}
 		if current.Status == "ERROR" {
-			return true, fmt.Errorf("instance creation failed. Instance is in ERROR state")
+			return true, fmt.Errorf("instance creation failed. Instance `%s` is in ERROR state", d.MachineID)
 		}
 		if current.Status == status {
 			return true, nil
 		}
 		return false, nil
-	}, 5, 5*time.Second)
+	}, 50, 5*time.Second)
 }
 
+// GetPublicKey returns public key data from keypair
 func (c *Client) GetPublicKey(keyPairName string) ([]byte, error) {
 	keyPair, err := keypairs.Get(c.ComputeV2, keyPairName).Extract()
 	if err != nil {
@@ -103,6 +112,7 @@ func (c *Client) GetPublicKey(keyPairName string) ([]byte, error) {
 	return []byte(keyPair.PublicKey), nil
 }
 
+// CreateKeyPair creates new key pair from public keu string
 func (c *Client) CreateKeyPair(name string, publicKey string) error {
 	opts := keypairs.CreateOpts{
 		Name:      name,
@@ -111,13 +121,15 @@ func (c *Client) CreateKeyPair(name string, publicKey string) error {
 	return keypairs.Create(c.ComputeV2, opts).Err
 }
 
+// DeleteKeyPair removes existing key pair
 func (c *Client) DeleteKeyPair(name string) error {
 	return keypairs.Delete(c.ComputeV2, name).Err
 }
 
-func (c *Client) GetFlavorID(d *Driver) (string, error) {
-	if d.FlavorId != "" {
-		return d.FlavorId, nil
+// ResolveFlavorID resolves `Driver.FlavorID` for given `Driver.FlavorName`
+func (c *Client) ResolveFlavorID(d *Driver) error {
+	if d.FlavorID != "" {
+		return nil
 	}
 	pagedFlavors := flavors.ListDetail(c.ComputeV2, nil)
 	flavorID := ""
@@ -134,5 +146,9 @@ func (c *Client) GetFlavorID(d *Driver) (string, error) {
 		}
 		return true, nil
 	})
-	return flavorID, err
+	if err != nil {
+		return err
+	}
+	d.FlavorID = flavorID
+	return nil
 }

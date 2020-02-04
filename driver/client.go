@@ -13,6 +13,7 @@ import (
 	"net/http"
 )
 
+// Client contains service clients
 type Client struct {
 	OSProvider *gophercloud.ProviderClient
 	ComputeV2  *gophercloud.ServiceClient
@@ -21,6 +22,7 @@ type Client struct {
 	VPC         *huaweisdk.ServiceClient
 }
 
+// Authenticate authenticate client in the cloud
 func (c *Client) Authenticate(d *Driver) error {
 	if c.OSProvider != nil {
 		return nil
@@ -34,7 +36,7 @@ func (c *Client) Authenticate(d *Driver) error {
 			Username:          d.Username,
 			Password:          d.Password,
 			ProjectName:       d.ProjectName,
-			ProjectID:         d.ProjectId,
+			ProjectID:         d.ProjectID,
 			ProjectDomainName: d.DomainName,
 			ProjectDomainID:   d.DomainID,
 			DefaultDomain:     d.DomainName,
@@ -77,17 +79,17 @@ func (c *Client) Authenticate(d *Driver) error {
 	}
 
 	// Duplicate to HuaweiSDK auth options
-	hwOpts := huaweisdk.AuthOptions{
-		IdentityEndpoint: opts.IdentityEndpoint,
-		Username:         opts.Username,
-		UserID:           opts.UserID,
-		Password:         opts.Password,
-		DomainID:         opts.DomainID,
-		DomainName:       opts.DomainName,
-		TenantID:         opts.TenantID,
-		TenantName:       opts.TenantName,
-		TokenID:          opts.TokenID,
-	}
+	//hwOpts := huaweisdk.AuthOptions{
+	//	IdentityEndpoint: opts.IdentityEndpoint,
+	//	Username:         opts.Username,
+	//	UserID:           opts.UserID,
+	//	Password:         opts.Password,
+	//	DomainID:         opts.DomainID,
+	//	DomainName:       opts.DomainName,
+	//	TenantID:         opts.TenantID,
+	//	TenantName:       opts.TenantName,
+	//	TokenID:          opts.TokenID,
+	//}
 
 	return nil
 }
@@ -102,10 +104,11 @@ func getEndpointType(endpointType string) string {
 	return "public"
 }
 
+// SetTLSConfig change default HTTPClient.Transport with TLS CA configuration using CACert from config
 func (c *Client) SetTLSConfig(d *Driver) error {
 	config := &tls.Config{}
-	if d.CaCert != "" {
-		caCert, err := ioutil.ReadFile(d.CaCert)
+	if d.CACert != "" {
+		caCert, err := ioutil.ReadFile(d.CACert)
 
 		if err != nil {
 			return fmt.Errorf("error reading CA Cert: %s", err)
@@ -114,7 +117,7 @@ func (c *Client) SetTLSConfig(d *Driver) error {
 		caCertPool := x509.NewCertPool()
 		ok := caCertPool.AppendCertsFromPEM(caCert)
 		if !ok {
-			return fmt.Errorf("can't use CA cert: %s", d.CaCert)
+			return fmt.Errorf("can't use CA cert: %s", d.CACert)
 		}
 		config.RootCAs = caCertPool
 	}

@@ -25,35 +25,35 @@ type Driver struct {
 	*drivers.BaseDriver
 	Cloud            string
 	AuthUrl          string
-	CaCert           string
+	CACert           string
 	ValidateCert     bool
 	DomainID         string
 	DomainName       string
 	Username         string
 	Password         string
 	TenantName       string
-	TenantId         string
+	TenantID         string
 	ProjectName      string
-	ProjectId        string
+	ProjectID        string
 	Region           string
 	AvailabilityZone string
 	EndpointType     string
-	MachineId        string
+	MachineID        string
 	FlavorName       string
-	FlavorId         string
+	FlavorID         string
 	ImageName        string
-	ImageId          string
+	ImageID          string
 	KeyPairName      string
-	VPCName          string
-	VPCId            string
+	VpcName          string
+	VpcID            string
 	SubnetName       string
-	SubnetId         string
+	SubnetID         string
 	PrivateKeyFile   string
 	SecurityGroup    string
-	FloatingIpPool   string
-	FloatingIpPoolId string
+	FloatingIPPool   string
+	FloatingIPPoolId string
 	Token            string
-	IpVersion        int
+	IPVersion        int
 	ConfigDrive      bool
 	client           *Client
 }

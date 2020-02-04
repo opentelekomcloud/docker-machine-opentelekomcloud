@@ -10,7 +10,7 @@ fmt:
 
 lint:
 	@echo Running go lint
-	@golint ./...
+	@golint --set_exit_status ./...
 
 vet:
 	@echo "go vet ."
