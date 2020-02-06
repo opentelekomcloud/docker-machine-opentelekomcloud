@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	maxAttempts  = 50
-	waitInterval = 5 * time.Second
+	maxAttempts   = 50
+	waitInterval  = 5 * time.Second
+	defaultRegion = "eu-de"
 )
 
 // Client contains service clients
@@ -30,9 +31,8 @@ type Client struct {
 	endpointType huaweisdk.Availability
 }
 
-func NewClient(region string, endpointType huaweisdk.Availability) *Client {
+func NewClient(endpointType huaweisdk.Availability) *Client {
 	return &Client{
-		region:       region,
 		endpointType: endpointType,
 	}
 }
@@ -59,12 +59,6 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 
 	userAgent := fmt.Sprintf("docker-machine/v%d", version.APIVersion)
 
-	hwProvider, err := openstack.NewClient(ao.IdentityEndpoint)
-	if err != nil {
-		return err
-	}
-	c.Provider = hwProvider
-	c.Provider.UserAgent.Prepend(userAgent)
 	hwOpts := huaweisdk.AuthOptions{
 		IdentityEndpoint: ao.IdentityEndpoint,
 		Username:         ao.Username,
@@ -76,7 +70,20 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 		TenantName:       ao.TenantName,
 		TokenID:          ao.TokenID,
 	}
-	return openstack.Authenticate(c.Provider, &hwOpts)
+	authClient, err := openstack.AuthenticatedClient(hwOpts)
+	if err != nil {
+		return err
+	}
+	c.Provider = authClient
+	c.Provider.UserAgent.Prepend(userAgent)
+	if cloud.RegionName == "" {
+		cloud.RegionName = defaultRegion
+	}
+	if cloud.EndpointType != "" {
+		c.endpointType = huaweisdk.Availability(cloud.EndpointType)
+	}
+	c.region = cloud.RegionName
+	return nil
 }
 
 // SetTLSConfig change default HTTPClient.Transport with TLS CA configuration using CACert from config

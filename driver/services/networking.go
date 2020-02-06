@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	vpcCIDR      = "192.168.0.0/24"
-	subnetCIDR   = "192.168.0.0/26"
-	primaryDNS   = "100.125.4.25"
-	secondaryDNS = "8.8.8.8"
+	vpcCIDR        = "192.168.0.0/24"
+	subnetCIDR     = "192.168.0.0/26"
+	primaryDNS     = "100.125.4.25"
+	secondaryDNS   = "8.8.8.8"
+	defaultGateway = "192.168.0.1"
 )
 
 var defaultDNS = []string{primaryDNS, secondaryDNS}
@@ -90,15 +91,17 @@ func (c *Client) DeleteVPC(vpcID string) error {
 // CreateSubnet creates new Subnet and set Driver.SubnetID
 func (c *Client) CreateSubnet(vpcID string, subnetName string) (*subnets.Subnet, error) {
 	return subnets.Create(c.VPC, subnets.CreateOpts{
-		VPC_ID:  vpcID,
-		Name:    subnetName,
-		CIDR:    subnetCIDR,
-		DnsList: defaultDNS,
-	}).Extract()
+		VPC_ID:    vpcID,
+		Name:      subnetName,
+		CIDR:      subnetCIDR,
+		DnsList:   defaultDNS,
+		GatewayIP: defaultGateway,
+	},
+	).Extract()
 }
 
 // FindSubnet find subnet by name in given VPC and return ID
-func (c *Client) FindSubnet(subnetName string, vpcID string) (string, error) {
+func (c *Client) FindSubnet(vpcID string, subnetName string) (string, error) {
 	subnetList, err := subnets.List(c.VPC, subnets.ListOpts{
 		Name:   subnetName,
 		VPC_ID: vpcID,

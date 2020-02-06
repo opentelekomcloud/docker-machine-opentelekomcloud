@@ -136,7 +136,7 @@ func (d *Driver) createResources() error {
 		}
 	}
 	if d.SubnetID.value == "" && d.SubnetName != "" {
-		subnetID, err := d.client.FindSubnet(d.SubnetName, d.VpcID.value)
+		subnetID, err := d.client.FindSubnet(d.VpcID.value, d.SubnetName)
 		if err != nil {
 			return err
 		}
@@ -215,6 +215,7 @@ func (d *Driver) authenticate() error {
 			Token:             d.Token,
 		},
 	}
+	log.Infof("Authentication options: %v", opts)
 	return d.client.Authenticate(opts)
 }
 
@@ -417,14 +418,14 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-sec-group",
-			EnvVar: "OS_SECURITY_GROUPS",
+			EnvVar: "OS_SECURITY_GROUP",
 			Usage:  "Single security group to use",
 			Value:  defaultSecurityGroup,
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-floatingip-pool",
-			EnvVar: "OS_FLOATINGIP_POOL",
-			Usage:  "OpenTelekomCloud floating IP pool to get an IP from to assign to the instance",
+			Name:   "otc-floatingip",
+			EnvVar: "OS_FLOATINGIP",
+			Usage:  "OpenTelekomCloud floating IP to use",
 			Value:  "",
 		},
 		mcnflag.IntFlag{
@@ -440,10 +441,19 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultSSHUser,
 		},
 		mcnflag.IntFlag{
-			EnvVar: "OS_SSH_PORT",
 			Name:   "otc-ssh-port",
-			Usage:  "otc SSH port",
+			EnvVar: "OS_SSH_PORT",
+			Usage:  "Machine SSH port",
 			Value:  defaultSSHPort,
+		},
+		mcnflag.StringFlag{
+			Name:  "otc-endpoint-type",
+			Usage: "OpenTelekomCloud endpoint type",
+			Value: "publicURL",
+		},
+		mcnflag.BoolFlag{
+			Name:  "otc-validate-cert",
+			Usage: "Enable certification validation",
 		},
 	}
 }
@@ -675,7 +685,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.VpcName = flags.String("otc-vpc-name")
 	d.SubnetID = driverAttribute{value: flags.String("otc-subnet-id")}
 	d.SubnetName = flags.String("otc-subnet-name")
-	d.SecurityGroupID = driverAttribute{value: flags.String("otc-sec-group-id")}
 	d.SecurityGroup = flags.String("otc-sec-group")
 	d.FloatingIP = flags.String("otc-floatingip")
 	d.IPVersion = flags.Int("otc-ip-version")
@@ -686,7 +695,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Token = flags.String("otc-token")
 	d.SetSwarmConfigFromFlags(flags)
 
-	d.client = services.NewClient(d.Region, getEndpointType(d.EndpointType))
+	d.client = services.NewClient(getEndpointType(d.EndpointType))
 
 	return d.checkConfig()
 }

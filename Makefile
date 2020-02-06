@@ -1,8 +1,9 @@
 export GO111MODULE=on
 export PATH:=/usr/local/go/bin:$(PATH)
+export bin_path=/usr/local/bin/
 
 default: test build
-test: vet
+test: vet acceptance
 
 fmt:
 	@echo Running go fmt
@@ -21,14 +22,21 @@ vet:
 		exit 1; \
 	fi
 
+acceptance:
+	@go test ./...
+
 build: build-linux
 
 build-linux:
 	@echo "Build driver for Linux"
-	@go build --trimpath -o bin/docker-machine-driver-opentelecomcloud
+	@go build --trimpath -o bin/docker-machine-driver-opentelekomcloud
 
 build-windows:
 	@echo "Build driver for Windows"
-	@GOOS=windows go build --trimpath -o bin/docker-machine-driver-opentelecomcloud.exe
+	@GOOS=windows go build --trimpath -o bin/docker-machine-driver-opentelekomcloud.exe
 
 build-all: build-linux build-windows
+
+install:
+	@cp bin/docker-machine-driver-opentelekomcloud ${bin_path}
+	@echo "Driver installed to ${bin_path}"
