@@ -9,7 +9,7 @@ require (
 	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/machine v0.16.2
-	github.com/gophercloud/gophercloud v0.7.0
+	github.com/gophercloud/gophercloud v0.7.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20200104035643-cb37ab634bff
 	github.com/huaweicloud/golangsdk v0.0.0-20200122065641-034e66c4f159
 	github.com/kr/pretty v0.2.0 // indirect
