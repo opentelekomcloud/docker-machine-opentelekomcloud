@@ -1,6 +1,7 @@
 package services
 
 import (
+	"fmt"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/floatingips"
@@ -31,17 +32,19 @@ func (c *Client) InitCompute() error {
 // CreateInstance creates new ECS
 func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPairName string) (*servers.Server, error) {
 
-	if subnetID == "" {
+	if subnetID != "" {
 		opts.Networks = []servers.Network{{UUID: subnetID}}
 	}
-
-	server, err := servers.Create(c.ComputeV2, keypairs.CreateOptsExt{
+	createOpts := &keypairs.CreateOptsExt{
 		CreateOptsBuilder: opts,
 		KeyName:           keyPairName,
-	}).Extract()
-
+	}
+	if opts.ServiceClient == nil {
+		opts.ServiceClient = c.ComputeV2
+	}
+	server, err := servers.Create(c.ComputeV2, createOpts).Extract()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error creating OpenTelekomCloud server: %s", err)
 	}
 	return server, nil
 }
@@ -95,12 +98,16 @@ func (c *Client) GetPublicKey(keyPairName string) ([]byte, error) {
 }
 
 // CreateKeyPair creates new key pair from given public key string
-func (c *Client) CreateKeyPair(name string, publicKey string) error {
+func (c *Client) CreateKeyPair(name string, publicKey string) (*keypairs.KeyPair, error) {
 	opts := keypairs.CreateOpts{
 		Name:      name,
 		PublicKey: publicKey,
 	}
-	return keypairs.Create(c.ComputeV2, opts).Err
+	keyPair, err := keypairs.Create(c.ComputeV2, opts).Extract()
+	if err != nil {
+		return nil, err
+	}
+	return keyPair, nil
 }
 
 // FindKeyPair searches for key pair and returns public key
@@ -221,7 +228,7 @@ func (c *Client) UnbindFloatingIP(floatingIP string, machineID string) error {
 // FindFloatingIP finds given floating IP and returns ID
 func (c *Client) FindFloatingIP(floatingIP string) (string, error) {
 	pager := floatingips.List(c.ComputeV2)
-	address := ""
+	addressID := ""
 	err := pager.EachPage(func(page pagination.Page) (b bool, err error) {
 		addressList, err := floatingips.ExtractFloatingIPs(page)
 		if err != nil {
@@ -229,13 +236,13 @@ func (c *Client) FindFloatingIP(floatingIP string) (string, error) {
 		}
 		for _, ad := range addressList {
 			if ad.IP == floatingIP {
-				address = ad.ID
+				addressID = ad.ID
 				return false, nil
 			}
 		}
 		return true, nil
 	})
-	return address, err
+	return addressID, err
 }
 
 func (c *Client) DeleteFloatingIP(floatingIP string) error {

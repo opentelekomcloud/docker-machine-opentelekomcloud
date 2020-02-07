@@ -581,8 +581,12 @@ func (d *Driver) loadSSHKey() error {
 	return nil
 }
 
-func (d *Driver) createKeyPair(publicKey []byte) error {
-	return d.client.CreateKeyPair(d.KeyPairName.value, string(publicKey))
+func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
+	kp, err := d.client.CreateKeyPair(d.KeyPairName.value, string(publicKey))
+	if err != nil {
+		return "", err
+	}
+	return kp.PublicKey, nil
 }
 
 func (d *Driver) createSSHKey() error {
@@ -612,7 +616,7 @@ func (d *Driver) createSSHKey() error {
 	if err := d.initCompute(); err != nil {
 		return err
 	}
-	if err := d.createKeyPair(publicKey); err != nil {
+	if _, err := d.createKeyPair(publicKey); err != nil {
 		return err
 	}
 	return nil
