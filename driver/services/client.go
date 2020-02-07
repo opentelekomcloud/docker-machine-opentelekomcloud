@@ -25,7 +25,6 @@ type Client struct {
 
 	ComputeV2 *huaweisdk.ServiceClient
 	VPC       *huaweisdk.ServiceClient
-	Identity  *huaweisdk.ServiceClient
 
 	region       string
 	endpointType huaweisdk.Availability

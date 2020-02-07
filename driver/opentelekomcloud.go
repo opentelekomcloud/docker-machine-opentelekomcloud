@@ -47,8 +47,6 @@ type Driver struct {
 	DomainName       string
 	Username         string
 	Password         string
-	TenantName       string
-	TenantID         string
 	ProjectName      string
 	ProjectID        string
 	Region           string
@@ -173,27 +171,6 @@ func (d *Driver) createResources() error {
 		if err := d.createSecGroup(); err != nil {
 			return err
 		}
-	}
-
-	if d.TenantName != "" && d.TenantID == "" {
-		if err := d.initIdentity(); err != nil {
-			return err
-		}
-		tenantID, err := d.client.GetTenantID(d.TenantName)
-
-		if err != nil {
-			return err
-		}
-
-		if tenantID == "" {
-			return fmt.Errorf("tenant not found by name `%s`", d.TenantName)
-		}
-
-		d.TenantID = tenantID
-		log.Debug("Found tenant id using its name", map[string]string{
-			"Name": d.TenantName,
-			"ID":   d.TenantID,
-		})
 	}
 
 	return nil
@@ -327,13 +304,13 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  "",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-tenant-name",
+			Name:   "otc-project-name",
 			EnvVar: "OS_TENANT_NAME",
 			Usage:  "OpenTelekomCloud project name",
 			Value:  "",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-tenant-id",
+			Name:   "otc-project-id",
 			EnvVar: "OS_TENANT_ID",
 			Usage:  "OpenTelekomCloud project ID",
 			Value:  "",
@@ -570,16 +547,6 @@ func (d *Driver) initCompute() error {
 	return nil
 }
 
-func (d *Driver) initIdentity() error {
-	if err := d.authenticate(); err != nil {
-		return err
-	}
-	if err := d.client.InitIdentity(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (d *Driver) initNetwork() error {
 	if err := d.authenticate(); err != nil {
 		return err
@@ -672,8 +639,8 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.DomainName = flags.String("otc-domain-name")
 	d.Username = flags.String("otc-username")
 	d.Password = flags.String("otc-password")
-	d.TenantName = flags.String("otc-tenant-name")
-	d.TenantID = flags.String("otc-tenant-id")
+	d.ProjectName = flags.String("otc-project-name")
+	d.ProjectID = flags.String("otc-project-id")
 	d.Region = flags.String("otc-region")
 	d.AvailabilityZone = flags.String("otc-availability-zone")
 	d.EndpointType = flags.String("otc-endpoint-type")
