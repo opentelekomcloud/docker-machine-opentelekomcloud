@@ -2,80 +2,43 @@ package services
 
 import (
 	"github.com/huaweicloud/golangsdk"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
+func initNetwork(t *testing.T, client *Client) {
+	require.NoError(t, client.InitNetwork())
+}
+
 func TestClient_CreateVPC(t *testing.T) {
-	client, err := authClient()
-	if err != nil {
-		t.Error(authFailedMessage)
-		return
-	}
-	if err := client.InitNetwork(); err != nil {
-		t.Error(err)
-		return
-	}
+	client := authClient(t)
+	initNetwork(t, client)
 	vpc, err := client.CreateVPC(vpcName)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if err := client.DeleteVPC(vpc.ID); err != nil {
-		t.Error(err)
-		return
-	}
+	require.NoError(t, err)
+	assert.NoError(t, client.DeleteVPC(vpc.ID))
 }
 
 func TestClient_CreateSubnet(t *testing.T) {
-	client, err := authClient()
-	if err != nil {
-		t.Error(authFailedMessage)
-		return
-	}
-	if err := client.InitNetwork(); err != nil {
-		t.Error(err)
-		return
-	}
+	client := authClient(t)
+	initNetwork(t, client)
 	vpc, err := client.CreateVPC(vpcName)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	require.NoError(t, err)
 
 	subnet, err := client.CreateSubnet(vpc.ID, subnetName)
-	if err != nil {
-		t.Error(err)
-	}
+	assert.NoError(t, err)
 
 	err = client.WaitForSubnetStatus(subnet.ID, "ACTIVE")
+	assert.NoError(t, err)
 
 	found, err := client.FindSubnet(vpc.ID, subnetName)
-	if err != nil {
-		t.Error(err)
-	}
-	if found != subnet.ID {
-		t.Errorf(invalidFind, "subnet")
-	}
+	assert.NoError(t, err)
+	assert.Equalf(t, subnet.ID, found, invalidFind, "subnet")
 
-	defer func() {
+	assert.NoError(t, client.DeleteSubnet(vpc.ID, found))
 
-		if err == nil {
-			err := client.DeleteSubnet(vpc.ID, found)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
+	err = client.WaitForSubnetStatus(subnet.ID, "")
+	assert.IsType(t, golangsdk.ErrDefault404{}, err)
 
-		err = client.WaitForSubnetStatus(subnet.ID, "")
-		switch err.(type) {
-		case golangsdk.ErrDefault404:
-		default:
-			t.Error(err)
-		}
-
-		if err := client.DeleteVPC(vpc.ID); err != nil {
-			t.Error(err)
-			return
-		}
-	}()
+	assert.NoError(t, client.DeleteVPC(vpc.ID))
 }

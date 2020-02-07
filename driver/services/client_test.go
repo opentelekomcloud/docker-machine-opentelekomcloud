@@ -2,6 +2,7 @@ package services
 
 import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -13,20 +14,16 @@ const (
 	invalidFind       = "found %s is not what we want!"
 )
 
-func authClient() (*Client, error) {
+func authClient(t *testing.T) *Client {
 	client := NewClient("public")
 	opts := &clientconfig.ClientOpts{
 		Cloud: "otc",
 	}
-	if err := client.Authenticate(opts); err != nil {
-		return nil, err
-	}
-	return client, nil
+	err := client.Authenticate(opts)
+	require.NoError(t, err, authFailedMessage)
+	return client
 }
 
 func TestClient_Authenticate(t *testing.T) {
-	_, err := authClient()
-	if err != nil {
-		t.Error(authFailedMessage)
-	}
+	authClient(t)
 }
