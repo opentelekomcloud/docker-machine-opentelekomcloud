@@ -14,8 +14,16 @@ func initNetwork(t *testing.T, client *Client) {
 func TestClient_CreateVPC(t *testing.T) {
 	client := authClient(t)
 	initNetwork(t, client)
+
 	vpc, err := client.CreateVPC(vpcName)
 	require.NoError(t, err)
+
+	assert.NoError(t, client.WaitForVPCStatus(vpc.ID, "OK"))
+
+	vpcID, err := client.FindVPC(vpcName)
+	assert.NoError(t, err)
+	assert.Equal(t, vpc.ID, vpcID)
+
 	assert.NoError(t, client.DeleteVPC(vpc.ID))
 }
 

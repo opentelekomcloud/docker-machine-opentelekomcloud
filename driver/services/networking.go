@@ -77,7 +77,7 @@ func (c *Client) WaitForVPCStatus(vpcID, status string) error {
 			return true, fmt.Errorf("VPC creation failed. Instance `%s` is in ERROR state", vpcID)
 		}
 		if cur.Status == status {
-			return false, nil
+			return true, nil
 		}
 		return false, nil
 	}, maxAttempts, waitInterval)
