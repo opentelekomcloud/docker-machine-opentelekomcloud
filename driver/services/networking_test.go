@@ -12,6 +12,7 @@ func initNetwork(t *testing.T, client *Client) {
 }
 
 func TestClient_CreateVPC(t *testing.T) {
+	cleanupResources(t)
 	client := authClient(t)
 	initNetwork(t, client)
 
@@ -28,6 +29,7 @@ func TestClient_CreateVPC(t *testing.T) {
 }
 
 func TestClient_CreateSubnet(t *testing.T) {
+	cleanupResources(t)
 	client := authClient(t)
 	initNetwork(t, client)
 	vpc, err := client.CreateVPC(vpcName)

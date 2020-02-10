@@ -56,7 +56,7 @@ type driverAttribute struct {
 type Driver struct {
 	*drivers.BaseDriver
 	Cloud            string
-	AuthUrl          string
+	AuthURL          string
 	CACert           string
 	ValidateCert     bool
 	DomainID         string
@@ -197,7 +197,7 @@ func (d *Driver) authenticate() error {
 		Cloud:      d.Cloud,
 		RegionName: d.Region,
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:           d.AuthUrl,
+			AuthURL:           d.AuthURL,
 			Username:          d.Username,
 			Password:          d.Password,
 			ProjectName:       d.ProjectName,
@@ -263,11 +263,11 @@ func (d *Driver) createInstance() error {
 		SecurityGroups:   []string{d.SecurityGroup},
 		AvailabilityZone: d.AvailabilityZone,
 	}
-	machine, err := d.client.CreateInstance(serverOpts, d.SubnetID.value, d.KeyPairName.value)
+	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.value, d.KeyPairName.value)
 	if err != nil {
 		return err
 	}
-	d.MachineID = machine.ID
+	d.MachineID = instance.ID
 	return nil
 }
 
@@ -651,7 +651,7 @@ func getEndpointType(endpointType string) golangsdk.Availability {
 }
 
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
-	d.AuthUrl = flags.String("otc-auth-url")
+	d.AuthURL = flags.String("otc-auth-url")
 	d.Cloud = flags.String("otc-cloud")
 	d.ValidateCert = flags.Bool("otc-validate-cert")
 	d.CACert = flags.String("otc-cacert")

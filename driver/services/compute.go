@@ -29,6 +29,12 @@ import (
 	"github.com/huaweicloud/golangsdk/pagination"
 )
 
+// Instance statuses
+const (
+	InstanceStatusStopped = "SHUTOFF"
+	InstanceStatusRunning = "ACTIVE"
+)
+
 // InitCompute initializes Compute v2 service
 func (c *Client) InitCompute() error {
 	if c.ComputeV2 != nil {
@@ -65,43 +71,71 @@ func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPa
 	return server, nil
 }
 
-// GetServerDetails returns details of ECS
-func (c *Client) GetServerDetails(machineID string) (*servers.Server, error) {
-	server, err := servers.Get(c.ComputeV2, machineID).Extract()
-	if err != nil {
-		return nil, err
-	}
-	return server, nil
-}
-
 // StartInstance starts existing ECS instance
-func (c *Client) StartInstance(machineID string) error {
-	return startstop.Start(c.ComputeV2, machineID).Err
+func (c *Client) StartInstance(instanceID string) error {
+	return startstop.Start(c.ComputeV2, instanceID).Err
 }
 
 // StopInstance stops existing ECS instance
-func (c *Client) StopInstance(machineID string) error {
-	return startstop.Stop(c.ComputeV2, machineID).Err
+func (c *Client) StopInstance(instanceID string) error {
+	return startstop.Stop(c.ComputeV2, instanceID).Err
 }
 
 // RestartInstance restarts ECS instance
-func (c *Client) RestartInstance(machineID string) error {
+func (c *Client) RestartInstance(instanceID string) error {
 	opts := &servers.RebootOpts{Type: servers.SoftReboot}
-	return servers.Reboot(c.ComputeV2, machineID, opts).Err
+	return servers.Reboot(c.ComputeV2, instanceID, opts).Err
 }
 
 // DeleteInstance removes existing ECS instance
-func (c *Client) DeleteInstance(machineID string) error {
-	return servers.Delete(c.ComputeV2, machineID).Err
+func (c *Client) DeleteInstance(instanceID string) error {
+	return servers.Delete(c.ComputeV2, instanceID).Err
 }
 
-func (c *Client) GetInstanceStatus(machineID string) (*servers.Server, error) {
-	return servers.Get(c.ComputeV2, machineID).Extract()
+func (c *Client) FindInstance(name string) (string, error) {
+	listOpts := servers.ListOpts{Name: name}
+	pager := servers.List(c.ComputeV2, listOpts)
+	serverID := ""
+	err := pager.EachPage(func(page pagination.Page) (b bool, err error) {
+		servs, err := servers.ExtractServers(page)
+		if err != nil {
+			return false, err
+		}
+		for _, srv := range servs {
+			serverID = srv.ID
+			return false, nil
+		}
+		return true, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return serverID, nil
+}
+
+func (c *Client) GetInstanceStatus(instanceID string) (*servers.Server, error) {
+	return servers.Get(c.ComputeV2, instanceID).Extract()
 }
 
 // WaitForInstanceStatus waits for instance to be in given status
-func (c *Client) WaitForInstanceStatus(machineID string, status string) error {
-	return servers.WaitForStatus(c.ComputeV2, machineID, status, 300)
+func (c *Client) WaitForInstanceStatus(instanceID string, status string) error {
+	return servers.WaitForStatus(c.ComputeV2, instanceID, status, 300)
+}
+
+func (c *Client) InstanceBindToIP(instanceID string, ip string) (bool, error) {
+	instanceDetails, err := c.GetInstanceStatus(instanceID)
+	if err != nil {
+		return false, err
+	}
+	for _, addrPool := range instanceDetails.Addresses {
+		for _, addrDetails := range addrPool.([]interface{}) {
+			details := addrDetails.(map[string]interface{})
+			if details["addr"] == ip {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 // GetPublicKey returns public key data from keypair
@@ -231,14 +265,14 @@ func (c *Client) CreateFloatingIP() (string, error) {
 	return result.IP, nil
 }
 
-func (c *Client) BindFloatingIP(floatingIP string, machineID string) error {
+func (c *Client) BindFloatingIP(floatingIP string, instanceID string) error {
 	opts := floatingips.AssociateOpts{FloatingIP: floatingIP}
-	return floatingips.AssociateInstance(c.ComputeV2, machineID, opts).Err
+	return floatingips.AssociateInstance(c.ComputeV2, instanceID, opts).Err
 }
 
-func (c *Client) UnbindFloatingIP(floatingIP string, machineID string) error {
+func (c *Client) UnbindFloatingIP(floatingIP string, instanceID string) error {
 	opts := floatingips.DisassociateOpts{FloatingIP: floatingIP}
-	return floatingips.DisassociateInstance(c.ComputeV2, machineID, opts).Err
+	return floatingips.DisassociateInstance(c.ComputeV2, instanceID, opts).Err
 }
 
 // FindFloatingIP finds given floating IP and returns ID
