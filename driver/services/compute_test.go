@@ -191,9 +191,14 @@ func TestClient_CreateInstance(t *testing.T) {
 		Networks:         []servers.Network{{UUID: subnet.ID}},
 	}
 	instance, err := client.CreateInstance(opts, subnet.ID, kp.Name)
-	assert.NoError(t, err)
-
+	require.NoError(t, err)
 	assert.NoError(t, client.WaitForInstanceStatus(instance.ID, InstanceStatusRunning))
+	defer func() {
+		assert.NoError(t, client.DeleteInstance(instance.ID))
+		err = client.WaitForInstanceStatus(instance.ID, "")
+		require.IsType(t, golangsdk.ErrDefault404{}, err)
+	}()
+
 	details, err := client.GetInstanceStatus(instance.ID)
 	assert.NoError(t, err)
 	if details != nil {
@@ -217,11 +222,6 @@ func TestClient_CreateInstance(t *testing.T) {
 
 	assert.NoError(t, client.RestartInstance(instance.ID))
 	assert.NoError(t, client.WaitForInstanceStatus(instance.ID, InstanceStatusRunning))
-
-	assert.NoError(t, client.DeleteInstance(instance.ID))
-
-	err = client.WaitForInstanceStatus(instance.ID, "")
-	require.IsType(t, golangsdk.ErrDefault404{}, err)
 
 }
 
