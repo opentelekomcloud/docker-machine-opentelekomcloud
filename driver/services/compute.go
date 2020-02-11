@@ -26,6 +26,7 @@ import (
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/startstop"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/flavors"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
+	"github.com/huaweicloud/golangsdk/openstack/imageservice/v2/images"
 	"github.com/huaweicloud/golangsdk/pagination"
 )
 
@@ -53,7 +54,6 @@ func (c *Client) InitCompute() error {
 
 // CreateInstance creates new ECS
 func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPairName string) (*servers.Server, error) {
-
 	if subnetID != "" {
 		opts.Networks = []servers.Network{{UUID: subnetID}}
 	}
@@ -188,8 +188,8 @@ func (c *Client) DeleteKeyPair(name string) error {
 	return keypairs.Delete(c.ComputeV2, name).Err
 }
 
-// ResolveFlavorID resolves `Flavor ID` for given `Flavor Name`
-func (c *Client) ResolveFlavorID(flavorName string) (string, error) {
+// FindFlavor resolves `Flavor ID` for given `Flavor Name`
+func (c *Client) FindFlavor(flavorName string) (string, error) {
 	pagedFlavors := flavors.ListDetail(c.ComputeV2, nil)
 	flavorID := ""
 	err := pagedFlavors.EachPage(func(page pagination.Page) (b bool, err error) {
@@ -209,6 +209,30 @@ func (c *Client) ResolveFlavorID(flavorName string) (string, error) {
 		return "", err
 	}
 	return flavorID, nil
+}
+
+// FindImage resolve image ID by given image Name
+func (c *Client) FindImage(imageName string) (string, error) {
+	opts := images.ListOpts{Name: imageName}
+	pager := images.List(c.ComputeV2, opts)
+	imageID := ""
+	err := pager.EachPage(func(page pagination.Page) (b bool, err error) {
+		imageList, err := images.ExtractImages(page)
+		if err != nil {
+			return false, err
+		}
+		for _, image := range imageList {
+			if image.Name == imageName {
+				imageID = image.ID
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return imageID, nil
 }
 
 // CreateSecurityGroup creates new sec group and returns group ID

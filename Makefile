@@ -23,7 +23,8 @@ vet:
 	fi
 
 acceptance:
-	@go test ./...
+	@echo "Starting acceptance tests..."
+	@go test ./... -race -covermode=atomic -coverprofile=coverage.out
 
 build: build-linux
 

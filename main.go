@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	plugin.RegisterDriver(opentelekomcloud.NewDriver("default", "path"))
+	plugin.RegisterDriver(opentelekomcloud.NewDriver("default", ""))
 }

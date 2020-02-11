@@ -52,7 +52,17 @@ func cleanupResources(t *testing.T) {
 		err = c.WaitForInstanceStatus(srvID, "")
 		require.IsType(t, golangsdk.ErrDefault404{}, err)
 	}
-	go func() { _ = c.DeleteKeyPair(kpName) }()
+	go func() {
+		err := c.DeleteKeyPair(kpName)
+		if err != nil {
+			log.Error(err)
+		}
+	}()
+	sg, err := c.FindSecurityGroup(sgName)
+	require.NoError(t, err)
+	if sg != "" {
+		require.NoError(t, c.DeleteSecurityGroup(sg))
+	}
 	vpcID, _ := c.FindVPC(vpcName)
 	if vpcID == "" {
 		return
@@ -80,13 +90,15 @@ func generatePair(t *testing.T) *ssh.KeyPair {
 }
 
 func TestClient_CreateSecurityGroup(t *testing.T) {
+	cleanupResources(t)
+
 	client := computeClient(t)
 	sg, err := client.CreateSecurityGroup(sgName)
 	require.NoError(t, err)
 
 	sgID, err := client.FindSecurityGroup(sgName)
 	assert.NoError(t, err)
-	assert.EqualValuesf(t, sg.ID, sgID, invalidFind, "subnet")
+	assert.EqualValuesf(t, sg.ID, sgID, invalidFind, "sec group")
 
 	assert.NoError(t, client.DeleteSecurityGroup(sg.ID))
 }
@@ -213,9 +225,16 @@ func TestClient_CreateInstance(t *testing.T) {
 
 }
 
-func TestClient_ResolveFlavorID(t *testing.T) {
+func TestClient_FindFlavor(t *testing.T) {
 	client := computeClient(t)
-	flvID, err := client.ResolveFlavorID(defaultFlavor)
+	flvID, err := client.FindFlavor(defaultFlavor)
 	require.NoError(t, err)
 	require.NotEmpty(t, flvID)
+}
+
+func TestClient_FindImage(t *testing.T) {
+	client := computeClient(t)
+	imgID, err := client.FindImage(defaultImage)
+	require.NoError(t, err)
+	require.NotEmpty(t, imgID)
 }

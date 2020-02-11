@@ -48,7 +48,7 @@ const (
 	defaultSubnetName    = "subnet-docker-machine"
 )
 
-type driverAttribute struct {
+type managedSting struct {
 	value         string
 	driverManaged bool
 }
@@ -68,20 +68,20 @@ type Driver struct {
 	Region           string
 	AvailabilityZone string
 	EndpointType     string
-	MachineID        string
+	InstanceID       string
 	FlavorName       string
 	FlavorID         string
 	ImageName        string
 	ImageID          string
-	KeyPairName      driverAttribute
+	KeyPairName      managedSting
 	VpcName          string
-	VpcID            driverAttribute
+	VpcID            managedSting
 	SubnetName       string
-	SubnetID         driverAttribute
+	SubnetID         managedSting
 	PrivateKeyFile   string
 	SecurityGroup    string
-	SecurityGroupID  driverAttribute
-	FloatingIP       string
+	SecurityGroupID  managedSting
+	FloatingIP       managedSting
 	Token            string
 	IPVersion        int
 	client           *services.Client
@@ -95,7 +95,7 @@ func (d *Driver) createVPC() error {
 	if err != nil {
 		return err
 	}
-	d.VpcID = driverAttribute{
+	d.VpcID = managedSting{
 		value:         vpc.ID,
 		driverManaged: true,
 	}
@@ -110,7 +110,7 @@ func (d *Driver) createSubnet() error {
 	if err != nil {
 		return err
 	}
-	d.SubnetID = driverAttribute{
+	d.SubnetID = managedSting{
 		value:         subnet.ID,
 		driverManaged: true,
 	}
@@ -125,12 +125,14 @@ func (d *Driver) createSecGroup() error {
 	if err != nil {
 		return err
 	}
-	d.SecurityGroupID = driverAttribute{
+	d.SecurityGroupID = managedSting{
 		value:         secGrp.ID,
 		driverManaged: true,
 	}
 	return nil
 }
+
+const notFound = "%s not found by name `%s`"
 
 func (d *Driver) createResources() error {
 	// network init
@@ -143,7 +145,7 @@ func (d *Driver) createResources() error {
 			return err
 		}
 		if vpcID != "" {
-			d.VpcID = driverAttribute{vpcID, false}
+			d.VpcID = managedSting{vpcID, false}
 		}
 		if err := d.createVPC(); err != nil {
 			return err
@@ -155,7 +157,7 @@ func (d *Driver) createResources() error {
 			return err
 		}
 		if subnetID != "" {
-			d.SubnetID = driverAttribute{subnetID, false}
+			d.SubnetID = managedSting{subnetID, false}
 		}
 		if err := d.createSubnet(); err != nil {
 			return err
@@ -167,13 +169,24 @@ func (d *Driver) createResources() error {
 		return err
 	}
 	if d.FlavorID == "" && d.FlavorName != "" {
-		flavID, err := d.client.ResolveFlavorID(d.FlavorName)
+		flavID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
 			return err
 		}
 		if flavID == "" {
-			return fmt.Errorf("flavor not found by name `%s`", d.FlavorName)
+			return fmt.Errorf(notFound, "flavor", d.FlavorName)
 		}
+		d.FlavorID = flavID
+	}
+	if d.ImageID == "" && d.ImageName != "" {
+		imageID, err := d.client.FindImage(d.ImageName)
+		if err != nil {
+			return err
+		}
+		if imageID == "" {
+			return fmt.Errorf(notFound, "image", d.ImageName)
+		}
+		d.ImageID = imageID
 	}
 
 	if d.SecurityGroupID.value == "" && d.SecurityGroup != "" {
@@ -182,7 +195,7 @@ func (d *Driver) createResources() error {
 			return err
 		}
 		if secID != "" {
-			d.SecurityGroupID = driverAttribute{secID, false}
+			d.SecurityGroupID = managedSting{secID, false}
 		}
 		if err := d.createSecGroup(); err != nil {
 			return err
@@ -192,7 +205,7 @@ func (d *Driver) createResources() error {
 	return nil
 }
 
-func (d *Driver) authenticate() error {
+func (d *Driver) Authenticate() error {
 	opts := &clientconfig.ClientOpts{
 		Cloud:      d.Cloud,
 		RegionName: d.Region,
@@ -208,13 +221,12 @@ func (d *Driver) authenticate() error {
 			Token:             d.Token,
 		},
 	}
-	log.Infof("Authentication options: %v", opts)
 	return d.client.Authenticate(opts)
 }
 
 // Create creates new ECS used for docker-machine
 func (d *Driver) Create() error {
-	if err := d.authenticate(); err != nil {
+	if err := d.Authenticate(); err != nil {
 		return err
 	}
 	if err := d.createResources(); err != nil {
@@ -225,7 +237,7 @@ func (d *Driver) Create() error {
 			return err
 		}
 	} else {
-		d.KeyPairName = driverAttribute{
+		d.KeyPairName = managedSting{
 			fmt.Sprintf("%s-%s", d.MachineName, mcnutils.GenerateRandomID()),
 			true,
 		}
@@ -236,25 +248,28 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
-	if err := d.client.WaitForInstanceStatus(d.MachineID, "ACTIVE"); err != nil {
+	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
 		return err
 	}
-	if d.FloatingIP == "" {
+	if d.FloatingIP.value == "" {
 		addr, err := d.client.CreateFloatingIP()
 		if err != nil {
 			return err
 		}
-		d.FloatingIP = addr
+		d.FloatingIP = managedSting{value: addr, driverManaged: true}
 	}
-	if err := d.client.BindFloatingIP(d.FloatingIP, d.MachineID); err != nil {
+	if err := d.client.BindFloatingIP(d.FloatingIP.value, d.InstanceID); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (d *Driver) createInstance() error {
-	if d.MachineID != "" {
+	if d.InstanceID != "" {
 		return nil
+	}
+	if err := d.initCompute(); err != nil {
+		return err
 	}
 	serverOpts := &servers.CreateOpts{
 		Name:             d.MachineName,
@@ -267,7 +282,7 @@ func (d *Driver) createInstance() error {
 	if err != nil {
 		return err
 	}
-	d.MachineID = instance.ID
+	d.InstanceID = instance.ID
 	return nil
 }
 
@@ -416,7 +431,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultSecurityGroup,
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-floatingip",
+			Name:   "otc-floating-ip",
 			EnvVar: "OS_FLOATINGIP",
 			Usage:  "OpenTelekomCloud floating IP to use",
 			Value:  "",
@@ -483,7 +498,7 @@ func (d *Driver) GetState() (state.State, error) {
 	if err := d.initCompute(); err != nil {
 		return state.None, err
 	}
-	instance, err := d.client.GetInstanceStatus(d.MachineID)
+	instance, err := d.client.GetInstanceStatus(d.InstanceID)
 	if err != nil {
 		return state.None, err
 	}
@@ -507,39 +522,104 @@ func (d *Driver) Start() error {
 	if err := d.initCompute(); err != nil {
 		return err
 	}
-	return d.client.StartInstance(d.MachineID)
+	if err := d.client.StartInstance(d.InstanceID); err != nil {
+		return err
+	}
+	return d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning)
 }
 
 func (d *Driver) Stop() error {
 	if err := d.initCompute(); err != nil {
 		return err
 	}
-	return d.client.StopInstance(d.MachineID)
+	if err := d.client.StopInstance(d.InstanceID); err != nil {
+		return err
+	}
+	return d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusStopped)
 }
 
 func (d *Driver) Kill() error {
 	return d.Stop()
 }
 
-func (d *Driver) Remove() error {
-	if err := d.client.DeleteInstance(d.MachineID); err != nil {
+func (d *Driver) deleteInstance() error {
+	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return err
 	}
-	if d.KeyPairName.driverManaged {
-		if err := d.client.DeleteKeyPair(d.KeyPairName.value); err != nil {
+	err := d.client.WaitForInstanceStatus(d.InstanceID, "")
+	switch err.(type) {
+	case golangsdk.ErrDefault404:
+	default:
+		return err
+	}
+	return nil
+}
+
+func (d *Driver) deleteSubnet() error {
+	if d.SubnetID.driverManaged {
+		err := d.client.DeleteSubnet(d.VpcID.value, d.SubnetID.value)
+		if err != nil {
 			return err
 		}
-	}
-	if d.SecurityGroupID.driverManaged {
-		if err := d.client.DeleteSecurityGroup(d.SecurityGroupID.value); err != nil {
+		err = d.client.WaitForSubnetStatus(d.SubnetID.value, "")
+		switch err.(type) {
+		case golangsdk.ErrDefault404:
+		default:
 			return err
 		}
 	}
 	return nil
 }
 
+func (d *Driver) deleteVPC() error {
+	if d.VpcID.driverManaged {
+		err := d.client.DeleteVPC(d.VpcID.value)
+		if err != nil {
+			return err
+		}
+		err = d.client.WaitForVPCStatus(d.VpcID.value, "")
+		switch err.(type) {
+		case golangsdk.ErrDefault404:
+		default:
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *Driver) Remove() error {
+	if err := d.deleteInstance(); err != nil {
+		return err
+	}
+	if d.SecurityGroupID.driverManaged {
+		if err := d.client.DeleteSecurityGroup(d.SecurityGroupID.value); err != nil {
+			return err
+		}
+	}
+	if d.KeyPairName.driverManaged {
+		if err := d.client.DeleteKeyPair(d.KeyPairName.value); err != nil {
+			return err
+		}
+	}
+	if d.FloatingIP.driverManaged {
+		if err := d.client.DeleteFloatingIP(d.FloatingIP.value); err != nil {
+			return err
+		}
+	}
+	if err := d.deleteSubnet(); err != nil {
+		return err
+	}
+	if err := d.deleteVPC(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (d *Driver) Restart() error {
-	panic("implement me")
+	if err := d.Stop(); err != nil {
+		return err
+	}
+	return d.Start()
 }
 
 func NewDriver(hostName, storePath string) *Driver {
@@ -554,7 +634,7 @@ func NewDriver(hostName, storePath string) *Driver {
 }
 
 func (d *Driver) initCompute() error {
-	if err := d.authenticate(); err != nil {
+	if err := d.Authenticate(); err != nil {
 		return err
 	}
 	if err := d.client.InitCompute(); err != nil {
@@ -564,7 +644,7 @@ func (d *Driver) initCompute() error {
 }
 
 func (d *Driver) initNetwork() error {
-	if err := d.authenticate(); err != nil {
+	if err := d.Authenticate(); err != nil {
 		return err
 	}
 	if err := d.client.InitNetwork(); err != nil {
@@ -619,16 +699,17 @@ func (d *Driver) createSSHKey() error {
 	if err != nil {
 		return err
 	}
-	if publicKeyReceived != string(publicKey) {
-		return fmt.Errorf("found existing key pair `%s` with not matching public key", d.KeyPairName.value)
-	}
 	if publicKeyReceived != "" {
+		if publicKeyReceived != string(publicKey) {
+			return fmt.Errorf("found existing key pair `%s` with not matching public key", d.KeyPairName.value)
+		}
+
 		log.Debug("Using existing Key Pair...", map[string]string{"Name": d.KeyPairName.value})
-		d.KeyPairName = driverAttribute{d.KeyPairName.value, false}
+		d.KeyPairName = managedSting{d.KeyPairName.value, false}
 		return nil
 	}
 
-	d.KeyPairName = driverAttribute{d.KeyPairName.value, true}
+	d.KeyPairName = managedSting{d.KeyPairName.value, true}
 	if err := d.initCompute(); err != nil {
 		return err
 	}
@@ -668,16 +749,16 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.FlavorName = flags.String("otc-flavor-name")
 	d.ImageID = flags.String("otc-image-id")
 	d.ImageName = flags.String("otc-image-name")
-	d.VpcID = driverAttribute{value: flags.String("otc-vpc-id")}
+	d.VpcID = managedSting{value: flags.String("otc-vpc-id")}
 	d.VpcName = flags.String("otc-vpc-name")
-	d.SubnetID = driverAttribute{value: flags.String("otc-subnet-id")}
+	d.SubnetID = managedSting{value: flags.String("otc-subnet-id")}
 	d.SubnetName = flags.String("otc-subnet-name")
 	d.SecurityGroup = flags.String("otc-sec-group")
-	d.FloatingIP = flags.String("otc-floatingip")
+	d.FloatingIP = managedSting{value: flags.String("otc-floating-ip")}
 	d.IPVersion = flags.Int("otc-ip-version")
 	d.SSHUser = flags.String("otc-ssh-user")
 	d.SSHPort = flags.Int("otc-ssh-port")
-	d.KeyPairName = driverAttribute{value: flags.String("otc-keypair-name")}
+	d.KeyPairName = managedSting{value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
 	d.SetSwarmConfigFromFlags(flags)
