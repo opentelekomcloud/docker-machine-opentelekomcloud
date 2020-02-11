@@ -30,7 +30,10 @@ func defaultDriver() (*Driver, error) {
 
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
-			"otc-cloud": "otc",
+			"otc-cloud":       "otc",
+			"otc-subnet-name": subnetName,
+			"otc-vpc-name":    vpcName,
+			"otc-sec-group":   secGroup,
 		},
 		CreateFlags: driver.GetCreateFlags(),
 	}
@@ -52,12 +55,12 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, driver.SecurityGroup, secGroup)
-	assert.Equal(t, driver.VpcName, vpcName)
-	assert.Equal(t, driver.SubnetName, subnetName)
-	assert.Equal(t, driver.FlavorName, defaultFlavor)
-	assert.Equal(t, driver.ImageName, defaultImage)
-	assert.Equal(t, driver.Region, defaultRegion)
+	assert.Equal(t, defaultSecurityGroup, driver.SecurityGroup)
+	assert.Equal(t, defaultVpcName, driver.VpcName)
+	assert.Equal(t, defaultSubnetName, driver.SubnetName)
+	assert.Equal(t, defaultFlavor, driver.FlavorName)
+	assert.Equal(t, defaultImage, driver.ImageName)
+	assert.Equal(t, defaultRegion, driver.Region)
 	assert.Empty(t, flags.InvalidFlags)
 }
 
