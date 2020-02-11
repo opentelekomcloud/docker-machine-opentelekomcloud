@@ -11,11 +11,14 @@ import (
 )
 
 const (
-	kpName        = "machine-test-kp"
-	serverName    = "machine-test"
 	defaultAZ     = "eu-de-03"
 	defaultFlavor = "s2.large.2"
 	defaultImage  = "Standard_Debian_10_latest"
+)
+
+var (
+	kpName     = RandomString(12, "kp-")
+	serverName = RandomString(16, "mahine-")
 )
 
 func deleteSubnet(t *testing.T, vpcID string, subnetID string) {

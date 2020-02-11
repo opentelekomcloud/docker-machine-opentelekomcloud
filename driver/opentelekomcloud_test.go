@@ -4,14 +4,22 @@ import (
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/huaweicloud/golangsdk"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 )
 
+var (
+	secGroup     = services.RandomString(10, "sg-")
+	vpcName      = services.RandomString(10, "vpc-")
+	subnetName   = services.RandomString(15, "subnet-")
+	instanceName = services.RandomString(15, "machine-")
+)
+
 func defaultDriver() (*Driver, error) {
-	driver := NewDriver("default", "")
+	driver := NewDriver(instanceName, "")
 
 	storePath := driver.ResolveStorePath("")
 	if _, err := os.Stat(storePath); os.IsNotExist(err) {
@@ -36,7 +44,7 @@ func defaultDriver() (*Driver, error) {
 }
 
 func TestDriver_SetConfigFromFlags(t *testing.T) {
-	driver := NewDriver("default", "path")
+	driver := NewDriver(instanceName, "path")
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
 			"otc-cloud": "otc",
@@ -44,12 +52,11 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, driver.SecurityGroup, defaultSecurityGroup)
-	assert.Equal(t, driver.VpcName, defaultVpcName)
-	assert.Equal(t, driver.SubnetName, defaultSubnetName)
+	assert.Equal(t, driver.SecurityGroup, secGroup)
+	assert.Equal(t, driver.VpcName, vpcName)
+	assert.Equal(t, driver.SubnetName, subnetName)
 	assert.Equal(t, driver.FlavorName, defaultFlavor)
 	assert.Equal(t, driver.ImageName, defaultImage)
-	assert.Equal(t, driver.SubnetName, defaultSubnetName)
 	assert.Equal(t, driver.Region, defaultRegion)
 	assert.Empty(t, flags.InvalidFlags)
 }
@@ -94,7 +101,7 @@ func cleanupResources(driver *Driver) error {
 	if err := driver.initNetwork(); err != nil {
 		return err
 	}
-	instanceID, err := driver.client.FindInstance("default")
+	instanceID, err := driver.client.FindInstance(instanceName)
 	if err != nil {
 		return err
 	}
@@ -123,7 +130,7 @@ func cleanupResources(driver *Driver) error {
 			log.Error(err)
 		}
 	}
-	sg, err := driver.client.FindSecurityGroup(defaultSecurityGroup)
+	sg, err := driver.client.FindSecurityGroup(secGroup)
 	if err != nil {
 		return err
 	}
@@ -132,12 +139,12 @@ func cleanupResources(driver *Driver) error {
 			return err
 		}
 	}
-	vpcID, _ := driver.client.FindVPC(defaultVpcName)
+	vpcID, _ := driver.client.FindVPC(vpcName)
 	if vpcID == "" {
 		return nil
 	}
 	driver.VpcID = managedSting{value: vpcID, driverManaged: true}
-	subnetID, _ := driver.client.FindSubnet(vpcID, defaultSubnetName)
+	subnetID, _ := driver.client.FindSubnet(vpcID, subnetName)
 	if subnetID != "" {
 		driver.SubnetID = managedSting{value: subnetID, driverManaged: true}
 		if err := driver.deleteSubnet(); err != nil {

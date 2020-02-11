@@ -8,10 +8,13 @@ import (
 
 const (
 	authFailedMessage = "failed to authorize client"
-	vpcName           = "machine-test-vpc"
-	subnetName        = "machine-test-subnet"
-	sgName            = "machine-test-sg"
 	invalidFind       = "found %s is not what we want!"
+)
+
+var (
+	vpcName    = RandomString(12, "vpc-")
+	subnetName = RandomString(16, "subnet-")
+	sgName     = RandomString(12, "sg-")
 )
 
 func authClient(t *testing.T) *Client {
