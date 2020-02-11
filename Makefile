@@ -24,7 +24,7 @@ vet:
 
 acceptance:
 	@echo "Starting acceptance tests..."
-	@go test ./... -race -covermode=atomic -coverprofile=coverage.out
+	@go test ./... -race -covermode=atomic -coverprofile=coverage.txt
 
 build: build-linux
 

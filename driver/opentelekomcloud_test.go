@@ -15,7 +15,7 @@ func defaultDriver() (*Driver, error) {
 
 	storePath := driver.ResolveStorePath("")
 	if _, err := os.Stat(storePath); os.IsNotExist(err) {
-		if err := os.MkdirAll(storePath, 0644); err != nil {
+		if err := os.MkdirAll(storePath, 0744); err != nil {
 			return nil, err
 		}
 	}
