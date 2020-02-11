@@ -135,6 +135,7 @@ func (c *Client) FindSubnet(vpcID string, subnetName string) (string, error) {
 	return subnetList[0].ID, nil
 }
 
+// GetSubnetStatus returns details of subnet by ID
 func (c *Client) GetSubnetStatus(subnetID string) (*subnets.Subnet, error) {
 	return subnets.Get(c.VPC, subnetID).Extract()
 }

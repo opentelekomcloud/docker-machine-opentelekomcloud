@@ -53,6 +53,7 @@ type managedSting struct {
 	driverManaged bool
 }
 
+// Driver for docker-machine
 type Driver struct {
 	*drivers.BaseDriver
 	Cloud            string
@@ -622,6 +623,7 @@ func (d *Driver) Restart() error {
 	return d.Start()
 }
 
+// NewDriver create new driver instance
 func NewDriver(hostName, storePath string) *Driver {
 	return &Driver{
 		BaseDriver: &drivers.BaseDriver{
@@ -731,6 +733,7 @@ func getEndpointType(endpointType string) golangsdk.Availability {
 
 }
 
+// SetConfigFromFlags loads driver configuration from given flags
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.AuthURL = flags.String("otc-auth-url")
 	d.Cloud = flags.String("otc-cloud")

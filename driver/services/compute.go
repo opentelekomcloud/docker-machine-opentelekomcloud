@@ -92,6 +92,7 @@ func (c *Client) DeleteInstance(instanceID string) error {
 	return servers.Delete(c.ComputeV2, instanceID).Err
 }
 
+// FindInstance returns instance ID by instance Name
 func (c *Client) FindInstance(name string) (string, error) {
 	listOpts := servers.ListOpts{Name: name}
 	pager := servers.List(c.ComputeV2, listOpts)
@@ -113,6 +114,7 @@ func (c *Client) FindInstance(name string) (string, error) {
 	return serverID, nil
 }
 
+// GetInstanceStatus returns instance details by instance ID
 func (c *Client) GetInstanceStatus(instanceID string) (*servers.Server, error) {
 	return servers.Get(c.ComputeV2, instanceID).Extract()
 }
@@ -122,6 +124,7 @@ func (c *Client) WaitForInstanceStatus(instanceID string, status string) error {
 	return servers.WaitForStatus(c.ComputeV2, instanceID, status, 300)
 }
 
+// InstanceBindToIP checks if instance has IP bind
 func (c *Client) InstanceBindToIP(instanceID string, ip string) (bool, error) {
 	instanceDetails, err := c.GetInstanceStatus(instanceID)
 	if err != nil {
@@ -289,11 +292,13 @@ func (c *Client) CreateFloatingIP() (string, error) {
 	return result.IP, nil
 }
 
+// BindFloatingIP binds floating IP to instance
 func (c *Client) BindFloatingIP(floatingIP string, instanceID string) error {
 	opts := floatingips.AssociateOpts{FloatingIP: floatingIP}
 	return floatingips.AssociateInstance(c.ComputeV2, instanceID, opts).Err
 }
 
+// UnbindFloatingIP unbinds floating IP to instance
 func (c *Client) UnbindFloatingIP(floatingIP string, instanceID string) error {
 	opts := floatingips.DisassociateOpts{FloatingIP: floatingIP}
 	return floatingips.DisassociateInstance(c.ComputeV2, instanceID, opts).Err
@@ -319,6 +324,7 @@ func (c *Client) FindFloatingIP(floatingIP string) (string, error) {
 	return addressID, err
 }
 
+// DeleteFloatingIP releases floating IP
 func (c *Client) DeleteFloatingIP(floatingIP string) error {
 	address, err := c.FindFloatingIP(floatingIP)
 	if err != nil {

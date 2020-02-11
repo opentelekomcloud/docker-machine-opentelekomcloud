@@ -46,6 +46,7 @@ type Client struct {
 	endpointType huaweisdk.Availability
 }
 
+// NewClient generates new client instance for given endpoint type
 func NewClient(endpointType huaweisdk.Availability) *Client {
 	return &Client{
 		endpointType: endpointType,
