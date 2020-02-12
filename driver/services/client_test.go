@@ -18,7 +18,7 @@ var (
 )
 
 func authClient(t *testing.T) *Client {
-	client := NewClient("public")
+	client := &Client{}
 	opts := &clientconfig.ClientOpts{
 		Cloud: "otc",
 	}

@@ -123,12 +123,12 @@ func cleanupResources(driver *Driver) error {
 			}
 		}
 	}
-	kp, err := driver.client.FindKeyPair(driver.KeyPairName.value)
+	kp, err := driver.client.FindKeyPair(driver.KeyPairName.Value)
 	if err != nil {
 		return err
 	}
 	if kp != "" {
-		err := driver.client.DeleteKeyPair(driver.KeyPairName.value)
+		err := driver.client.DeleteKeyPair(driver.KeyPairName.Value)
 		if err != nil {
 			log.Error(err)
 		}
@@ -146,10 +146,10 @@ func cleanupResources(driver *Driver) error {
 	if vpcID == "" {
 		return nil
 	}
-	driver.VpcID = managedSting{value: vpcID, driverManaged: true}
+	driver.VpcID = managedSting{Value: vpcID, DriverManaged: true}
 	subnetID, _ := driver.client.FindSubnet(vpcID, subnetName)
 	if subnetID != "" {
-		driver.SubnetID = managedSting{value: subnetID, driverManaged: true}
+		driver.SubnetID = managedSting{Value: subnetID, DriverManaged: true}
 		if err := driver.deleteSubnet(); err != nil {
 			return err
 		}

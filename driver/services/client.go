@@ -46,11 +46,15 @@ type Client struct {
 	endpointType huaweisdk.Availability
 }
 
-// NewClient generates new client instance for given endpoint type
-func NewClient(endpointType huaweisdk.Availability) *Client {
-	return &Client{
-		endpointType: endpointType,
+func getEndpointType(endpointType string) huaweisdk.Availability {
+	eType := "public"
+	if endpointType == "internal" || endpointType == "internalURL" {
+		eType = "internal"
 	}
+	if endpointType == "admin" || endpointType == "adminURL" {
+		eType = "admin"
+	}
+	return huaweisdk.Availability(eType)
 }
 
 // Authenticate authenticate client in the cloud
@@ -96,7 +100,7 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 		cloud.RegionName = defaultRegion
 	}
 	if cloud.EndpointType != "" {
-		c.endpointType = huaweisdk.Availability(cloud.EndpointType)
+		c.endpointType = getEndpointType(cloud.EndpointType)
 	}
 	c.region = cloud.RegionName
 	return nil

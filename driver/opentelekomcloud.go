@@ -49,8 +49,8 @@ const (
 )
 
 type managedSting struct {
-	value         string
-	driverManaged bool
+	Value         string `json:"value"`
+	DriverManaged bool   `json:"managed"`
 }
 
 // Driver for docker-machine
@@ -89,7 +89,7 @@ type Driver struct {
 }
 
 func (d *Driver) createVPC() error {
-	if d.VpcID.value != "" {
+	if d.VpcID.Value != "" {
 		return nil
 	}
 	vpc, err := d.client.CreateVPC(d.VpcName)
@@ -97,29 +97,29 @@ func (d *Driver) createVPC() error {
 		return err
 	}
 	d.VpcID = managedSting{
-		value:         vpc.ID,
-		driverManaged: true,
+		Value:         vpc.ID,
+		DriverManaged: true,
 	}
 	return nil
 }
 
 func (d *Driver) createSubnet() error {
-	if d.SubnetID.value != "" {
+	if d.SubnetID.Value != "" {
 		return nil
 	}
-	subnet, err := d.client.CreateSubnet(d.VpcID.value, d.SubnetName)
+	subnet, err := d.client.CreateSubnet(d.VpcID.Value, d.SubnetName)
 	if err != nil {
 		return err
 	}
 	d.SubnetID = managedSting{
-		value:         subnet.ID,
-		driverManaged: true,
+		Value:         subnet.ID,
+		DriverManaged: true,
 	}
 	return nil
 }
 
 func (d *Driver) createSecGroup() error {
-	if d.SecurityGroupID.value != "" {
+	if d.SecurityGroupID.Value != "" {
 		return nil
 	}
 	secGrp, err := d.client.CreateSecurityGroup(d.SecurityGroup, d.SSHPort)
@@ -127,8 +127,8 @@ func (d *Driver) createSecGroup() error {
 		return err
 	}
 	d.SecurityGroupID = managedSting{
-		value:         secGrp.ID,
-		driverManaged: true,
+		Value:         secGrp.ID,
+		DriverManaged: true,
 	}
 	return nil
 }
@@ -140,7 +140,7 @@ func (d *Driver) createResources() error {
 	if err := d.client.InitNetwork(); err != nil {
 		return err
 	}
-	if d.VpcID.value == "" && d.VpcName != "" {
+	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
 			return err
@@ -152,8 +152,8 @@ func (d *Driver) createResources() error {
 			return err
 		}
 	}
-	if d.SubnetID.value == "" && d.SubnetName != "" {
-		subnetID, err := d.client.FindSubnet(d.VpcID.value, d.SubnetName)
+	if d.SubnetID.Value == "" && d.SubnetName != "" {
+		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
 			return err
 		}
@@ -190,7 +190,7 @@ func (d *Driver) createResources() error {
 		d.ImageID = imageID
 	}
 
-	if d.SecurityGroupID.value == "" && d.SecurityGroup != "" {
+	if d.SecurityGroupID.Value == "" && d.SecurityGroup != "" {
 		secID, err := d.client.FindSecurityGroup(d.SecurityGroup)
 		if err != nil {
 			return err
@@ -233,7 +233,7 @@ func (d *Driver) Create() error {
 	if err := d.createResources(); err != nil {
 		return err
 	}
-	if d.KeyPairName.value != "" {
+	if d.KeyPairName.Value != "" {
 		if err := d.loadSSHKey(); err != nil {
 			return err
 		}
@@ -252,14 +252,14 @@ func (d *Driver) Create() error {
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
 		return err
 	}
-	if d.FloatingIP.value == "" {
+	if d.FloatingIP.Value == "" {
 		addr, err := d.client.CreateFloatingIP()
 		if err != nil {
 			return err
 		}
-		d.FloatingIP = managedSting{value: addr, driverManaged: true}
+		d.FloatingIP = managedSting{Value: addr, DriverManaged: true}
 	}
-	if err := d.client.BindFloatingIP(d.FloatingIP.value, d.InstanceID); err != nil {
+	if err := d.client.BindFloatingIP(d.FloatingIP.Value, d.InstanceID); err != nil {
 		return err
 	}
 	return nil
@@ -279,7 +279,7 @@ func (d *Driver) createInstance() error {
 		SecurityGroups:   []string{d.SecurityGroup},
 		AvailabilityZone: d.AvailabilityZone,
 	}
-	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.value, d.KeyPairName.value)
+	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value)
 	if err != nil {
 		return err
 	}
@@ -487,6 +487,11 @@ func (d *Driver) GetSSHUsername() string {
 	return d.SSHUser
 }
 
+func (d *Driver) GetIP() (string, error) {
+	d.IPAddress = d.FloatingIP.Value
+	return d.BaseDriver.GetIP()
+}
+
 func (d *Driver) GetURL() (string, error) {
 	ip, err := d.GetIP()
 	if err != nil || ip == "" {
@@ -544,6 +549,9 @@ func (d *Driver) Kill() error {
 }
 
 func (d *Driver) deleteInstance() error {
+	if err := d.initCompute(); err != nil {
+		return err
+	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return err
 	}
@@ -557,12 +565,15 @@ func (d *Driver) deleteInstance() error {
 }
 
 func (d *Driver) deleteSubnet() error {
-	if d.SubnetID.driverManaged {
-		err := d.client.DeleteSubnet(d.VpcID.value, d.SubnetID.value)
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if d.SubnetID.DriverManaged {
+		err := d.client.DeleteSubnet(d.VpcID.Value, d.SubnetID.Value)
 		if err != nil {
 			return err
 		}
-		err = d.client.WaitForSubnetStatus(d.SubnetID.value, "")
+		err = d.client.WaitForSubnetStatus(d.SubnetID.Value, "")
 		switch err.(type) {
 		case golangsdk.ErrDefault404:
 		default:
@@ -573,12 +584,15 @@ func (d *Driver) deleteSubnet() error {
 }
 
 func (d *Driver) deleteVPC() error {
-	if d.VpcID.driverManaged {
-		err := d.client.DeleteVPC(d.VpcID.value)
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if d.VpcID.DriverManaged {
+		err := d.client.DeleteVPC(d.VpcID.Value)
 		if err != nil {
 			return err
 		}
-		err = d.client.WaitForVPCStatus(d.VpcID.value, "")
+		err = d.client.WaitForVPCStatus(d.VpcID.Value, "")
 		switch err.(type) {
 		case golangsdk.ErrDefault404:
 		default:
@@ -589,21 +603,24 @@ func (d *Driver) deleteVPC() error {
 }
 
 func (d *Driver) Remove() error {
+	if err := d.Authenticate(); err != nil {
+		return err
+	}
 	if err := d.deleteInstance(); err != nil {
 		return err
 	}
-	if d.SecurityGroupID.driverManaged {
-		if err := d.client.DeleteSecurityGroup(d.SecurityGroupID.value); err != nil {
+	if d.SecurityGroupID.DriverManaged {
+		if err := d.client.DeleteSecurityGroup(d.SecurityGroupID.Value); err != nil {
 			return err
 		}
 	}
-	if d.KeyPairName.driverManaged {
-		if err := d.client.DeleteKeyPair(d.KeyPairName.value); err != nil {
+	if d.KeyPairName.DriverManaged {
+		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
 			return err
 		}
 	}
-	if d.FloatingIP.driverManaged {
-		if err := d.client.DeleteFloatingIP(d.FloatingIP.value); err != nil {
+	if d.FloatingIP.DriverManaged {
+		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
 			return err
 		}
 	}
@@ -632,6 +649,7 @@ func NewDriver(hostName, storePath string) *Driver {
 			SSHPort:     defaultSSHPort,
 			StorePath:   storePath,
 		},
+		client: &services.Client{},
 	}
 }
 
@@ -656,7 +674,7 @@ func (d *Driver) initNetwork() error {
 }
 
 func (d *Driver) loadSSHKey() error {
-	log.Debug("Loading Key Pair", d.KeyPairName.value)
+	log.Debug("Loading Key Pair", d.KeyPairName.Value)
 	if err := d.initCompute(); err != nil {
 		return err
 	}
@@ -665,14 +683,15 @@ func (d *Driver) loadSSHKey() error {
 	if err != nil {
 		return err
 	}
-	publicKey, err := d.client.GetPublicKey(d.KeyPairName.value)
+	publicKey, err := d.client.GetPublicKey(d.KeyPairName.Value)
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(d.GetSSHKeyPath(), privateKey, 0600); err != nil {
+	privateKeyPath := d.GetSSHKeyPath()
+	if err := ioutil.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(d.GetSSHKeyPath()+".pub", publicKey, 0600); err != nil {
+	if err := ioutil.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
 		return err
 	}
 
@@ -680,7 +699,7 @@ func (d *Driver) loadSSHKey() error {
 }
 
 func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
-	kp, err := d.client.CreateKeyPair(d.KeyPairName.value, string(publicKey))
+	kp, err := d.client.CreateKeyPair(d.KeyPairName.Value, string(publicKey))
 	if err != nil {
 		return "", err
 	}
@@ -688,30 +707,32 @@ func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 }
 
 func (d *Driver) createSSHKey() error {
-	d.KeyPairName.value = strings.Replace(d.KeyPairName.value, ".", "_", -1)
-	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName.value})
-	if err := ssh.GenerateSSHKey(d.GetSSHKeyPath()); err != nil {
+	d.KeyPairName.Value = strings.Replace(d.KeyPairName.Value, ".", "_", -1)
+	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
+	keyPath := d.GetSSHKeyPath()
+	if err := ssh.GenerateSSHKey(keyPath); err != nil {
 		return err
 	}
-	publicKey, err := ioutil.ReadFile(d.GetSSHKeyPath() + ".pub")
+	d.PrivateKeyFile = keyPath
+	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
 	if err != nil {
 		return err
 	}
-	publicKeyReceived, err := d.client.FindKeyPair(d.KeyPairName.value)
+	publicKeyReceived, err := d.client.FindKeyPair(d.KeyPairName.Value)
 	if err != nil {
 		return err
 	}
 	if publicKeyReceived != "" {
 		if publicKeyReceived != string(publicKey) {
-			return fmt.Errorf("found existing key pair `%s` with not matching public key", d.KeyPairName.value)
+			return fmt.Errorf("found existing key pair `%s` with not matching public key", d.KeyPairName.Value)
 		}
 
-		log.Debug("Using existing Key Pair...", map[string]string{"Name": d.KeyPairName.value})
-		d.KeyPairName = managedSting{d.KeyPairName.value, false}
+		log.Debug("Using existing Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
+		d.KeyPairName = managedSting{d.KeyPairName.Value, false}
 		return nil
 	}
 
-	d.KeyPairName = managedSting{d.KeyPairName.value, true}
+	d.KeyPairName = managedSting{d.KeyPairName.Value, true}
 	if err := d.initCompute(); err != nil {
 		return err
 	}
@@ -719,18 +740,6 @@ func (d *Driver) createSSHKey() error {
 		return err
 	}
 	return nil
-}
-
-func getEndpointType(endpointType string) golangsdk.Availability {
-	eType := "public"
-	if endpointType == "internal" || endpointType == "internalURL" {
-		eType = "internal"
-	}
-	if endpointType == "admin" || endpointType == "adminURL" {
-		eType = "admin"
-	}
-	return golangsdk.Availability(eType)
-
 }
 
 // SetConfigFromFlags loads driver configuration from given flags
@@ -752,22 +761,19 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.FlavorName = flags.String("otc-flavor-name")
 	d.ImageID = flags.String("otc-image-id")
 	d.ImageName = flags.String("otc-image-name")
-	d.VpcID = managedSting{value: flags.String("otc-vpc-id")}
+	d.VpcID = managedSting{Value: flags.String("otc-vpc-id")}
 	d.VpcName = flags.String("otc-vpc-name")
-	d.SubnetID = managedSting{value: flags.String("otc-subnet-id")}
+	d.SubnetID = managedSting{Value: flags.String("otc-subnet-id")}
 	d.SubnetName = flags.String("otc-subnet-name")
 	d.SecurityGroup = flags.String("otc-sec-group")
-	d.FloatingIP = managedSting{value: flags.String("otc-floating-ip")}
+	d.FloatingIP = managedSting{Value: flags.String("otc-floating-ip")}
 	d.IPVersion = flags.Int("otc-ip-version")
 	d.SSHUser = flags.String("otc-ssh-user")
 	d.SSHPort = flags.Int("otc-ssh-port")
-	d.KeyPairName = managedSting{value: flags.String("otc-keypair-name")}
+	d.KeyPairName = managedSting{Value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
 	d.SetSwarmConfigFromFlags(flags)
-
-	d.client = services.NewClient(getEndpointType(d.EndpointType))
-
 	return d.checkConfig()
 }
 
@@ -784,16 +790,16 @@ func (d *Driver) checkConfig() error {
 	if d.ImageName != "" && d.ImageID != "" {
 		return fmt.Errorf(errorExclusiveOptions, "Image name", "Image id")
 	}
-	if d.VpcName != "" && d.VpcID.value != "" {
+	if d.VpcName != "" && d.VpcID.Value != "" {
 		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
 	}
-	if d.SubnetName != "" && d.SubnetID.value != "" {
+	if d.SubnetName != "" && d.SubnetID.Value != "" {
 		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
 	}
 	if d.EndpointType != "" && (d.EndpointType != "publicURL" && d.EndpointType != "adminURL" && d.EndpointType != "internalURL") {
 		return fmt.Errorf(errorWrongEndpointType)
 	}
-	if (d.KeyPairName.value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.value == "" && d.PrivateKeyFile != "") {
+	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}
 	if d.Cloud == "" && d.Username == "" {
