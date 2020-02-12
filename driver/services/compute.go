@@ -241,9 +241,11 @@ func (c *Client) FindImage(imageName string) (string, error) {
 const (
 	cidrAll     = "0.0.0.0/0"
 	tcpProtocol = "TCP"
+	// port used by docker by default
+	DockerPort = 2376
 )
 
-func (c *Client) addSSHInboundRule(secGroupID string, sshPort int) error {
+func (c *Client) addInboundRule(secGroupID string, sshPort int) error {
 	ruleOpts := secgroups.CreateRuleOpts{
 		ParentGroupID: secGroupID,
 		FromPort:      sshPort,
@@ -264,7 +266,10 @@ func (c *Client) CreateSecurityGroup(securityGroupName string, sshPort int) (*se
 	if err != nil {
 		return nil, err
 	}
-	if err := c.addSSHInboundRule(sg.ID, sshPort); err != nil {
+	if err := c.addInboundRule(sg.ID, sshPort); err != nil {
+		return nil, err
+	}
+	if err := c.addInboundRule(sg.ID, DockerPort); err != nil {
 		return nil, err
 	}
 	return sg, nil

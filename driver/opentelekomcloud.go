@@ -30,6 +30,7 @@ import (
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"io/ioutil"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -467,8 +468,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	}
 }
 
-const dockerPort = "2376"
-
 func (d *Driver) GetSSHHostname() (string, error) {
 	return d.GetIP()
 }
@@ -497,7 +496,7 @@ func (d *Driver) GetURL() (string, error) {
 	if err != nil || ip == "" {
 		return "", err
 	}
-	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, dockerPort)), nil
+	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, strconv.Itoa(services.DockerPort))), nil
 }
 
 func (d *Driver) GetState() (state.State, error) {
