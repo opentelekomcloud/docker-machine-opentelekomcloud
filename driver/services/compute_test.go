@@ -96,7 +96,7 @@ func TestClient_CreateSecurityGroup(t *testing.T) {
 	cleanupResources(t)
 
 	client := computeClient(t)
-	sg, err := client.CreateSecurityGroup(sgName)
+	sg, err := client.CreateSecurityGroup(sgName, 22)
 	require.NoError(t, err)
 
 	sgID, err := client.FindSecurityGroup(sgName)
@@ -178,7 +178,7 @@ func TestClient_CreateInstance(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = client.DeleteFloatingIP(ip) }()
 
-	sg, err := client.CreateSecurityGroup(sgName)
+	sg, err := client.CreateSecurityGroup(sgName, 22)
 	require.NoError(t, err)
 	defer func() { _ = client.DeleteSecurityGroup(sg.ID) }()
 

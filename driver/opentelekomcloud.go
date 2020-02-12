@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	driverName           = "otc"
+	driverName           = "opentelekomcloud"
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-03"
 	defaultFlavor        = "s2.large.2"
@@ -122,7 +122,7 @@ func (d *Driver) createSecGroup() error {
 	if d.SecurityGroupID.value != "" {
 		return nil
 	}
-	secGrp, err := d.client.CreateSecurityGroup(d.SecurityGroup)
+	secGrp, err := d.client.CreateSecurityGroup(d.SecurityGroup, d.SSHPort)
 	if err != nil {
 		return err
 	}
@@ -504,11 +504,11 @@ func (d *Driver) GetState() (state.State, error) {
 		return state.None, err
 	}
 	switch instance.Status {
-	case "ACTIVE":
+	case services.InstanceStatusRunning:
 		return state.Running, nil
 	case "PAUSED":
 		return state.Paused, nil
-	case "SUSPENDED":
+	case services.InstanceStatusStopped:
 		return state.Stopped, nil
 	case "BUILDING":
 		return state.Starting, nil

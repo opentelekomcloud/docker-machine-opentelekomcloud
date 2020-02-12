@@ -238,17 +238,36 @@ func (c *Client) FindImage(imageName string) (string, error) {
 	return imageID, nil
 }
 
+const (
+	cidrAll     = "0.0.0.0/0"
+	tcpProtocol = "TCP"
+)
+
+func (c *Client) addSSHInboundRule(secGroupID string, sshPort int) error {
+	ruleOpts := secgroups.CreateRuleOpts{
+		ParentGroupID: secGroupID,
+		FromPort:      sshPort,
+		ToPort:        sshPort,
+		CIDR:          cidrAll,
+		IPProtocol:    tcpProtocol,
+	}
+	return secgroups.CreateRule(c.ComputeV2, ruleOpts).Err
+}
+
 // CreateSecurityGroup creates new sec group and returns group ID
-func (c *Client) CreateSecurityGroup(securityGroupName string) (*secgroups.SecurityGroup, error) {
+func (c *Client) CreateSecurityGroup(securityGroupName string, sshPort int) (*secgroups.SecurityGroup, error) {
 	opts := secgroups.CreateOpts{
 		Name:        securityGroupName,
 		Description: "Docker Machine security group",
 	}
-	result, err := secgroups.Create(c.ComputeV2, opts).Extract()
+	sg, err := secgroups.Create(c.ComputeV2, opts).Extract()
 	if err != nil {
 		return nil, err
 	}
-	return result, nil
+	if err := c.addSSHInboundRule(sg.ID, sshPort); err != nil {
+		return nil, err
+	}
+	return sg, nil
 }
 
 // FindSecurityGroup find security group by name

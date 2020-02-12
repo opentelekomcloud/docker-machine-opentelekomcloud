@@ -24,6 +24,7 @@ import (
 
 // Random generation for tests
 
+// DataRandCS is charset for randomizing
 const DataRandCS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-"
 
 var src = rand.NewSource(time.Now().UnixNano())
@@ -39,6 +40,7 @@ func randomByteSlice(size int, prefix string, charset string) []byte {
 	return result
 }
 
+// RandomString generates random string
 func RandomString(size int, prefix string, charset ...string) string {
 	cs := DataRandCS
 	if len(charset) > 0 {
