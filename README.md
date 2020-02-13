@@ -10,15 +10,12 @@ OpenTelekomCloud driver for docker-machine
 NB! Driver is currently in active development phase
 ---
 
-### Requirements:
-- Go 1.11+
-
 ### Installation
 
 Driver can be installed several ways
 
 #### From source code
-_(Requires gcc and make installed)_
+_(Requires Go 1.11+, gcc and make installed)_
 1. Clone [this](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud) git repository to any location
 2. Run `make build && sudo make install`, driver for linux will be built and copied to `/usr/local/bin`
 
