@@ -136,40 +136,24 @@ func (d *Driver) createSecGroup() error {
 
 const notFound = "%s not found by name `%s`"
 
-func (d *Driver) createResources() error {
-	// network init
-	if err := d.client.InitNetwork(); err != nil {
-		return err
-	}
+// Resolve name to IDs where possible
+func (d *Driver) resolveIDs() error {
 	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
 			return err
 		}
-		if vpcID != "" {
-			d.VpcID = managedSting{vpcID, false}
-		}
-		if err := d.createVPC(); err != nil {
-			return err
-		}
+		d.VpcID = managedSting{Value: vpcID}
 	}
+
 	if d.SubnetID.Value == "" && d.SubnetName != "" {
 		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
 			return err
 		}
-		if subnetID != "" {
-			d.SubnetID = managedSting{subnetID, false}
-		}
-		if err := d.createSubnet(); err != nil {
-			return err
-		}
+		d.SubnetID = managedSting{Value: subnetID}
 	}
 
-	// compute init
-	if err := d.initCompute(); err != nil {
-		return err
-	}
 	if d.FlavorID == "" && d.FlavorName != "" {
 		flavID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
@@ -190,20 +174,35 @@ func (d *Driver) createResources() error {
 		}
 		d.ImageID = imageID
 	}
-
 	if d.SecurityGroupID.Value == "" && d.SecurityGroup != "" {
 		secID, err := d.client.FindSecurityGroup(d.SecurityGroup)
 		if err != nil {
 			return err
 		}
-		if secID != "" {
-			d.SecurityGroupID = managedSting{secID, false}
-		}
-		if err := d.createSecGroup(); err != nil {
-			return err
-		}
+		d.SecurityGroupID = managedSting{Value: secID}
 	}
+	return nil
+}
 
+func (d *Driver) createResources() error {
+	// network init
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if err := d.initCompute(); err != nil {
+	}
+	if err := d.resolveIDs(); err != nil {
+		return err
+	}
+	if err := d.createVPC(); err != nil {
+		return err
+	}
+	if err := d.createSubnet(); err != nil {
+		return err
+	}
+	if err := d.createSecGroup(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -777,24 +776,11 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 }
 
 const (
-	errorExclusiveOptions  string = "either %s or %s must be specified, not both"
 	errorBothOptions       string = "both %s and %s must be specified"
 	errorWrongEndpointType string = "endpoint type must be 'publicURL', 'adminURL' or 'internalURL'"
 )
 
 func (d *Driver) checkConfig() error {
-	if d.FlavorName != "" && d.FlavorID != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Flavor name", "Flavor id")
-	}
-	if d.ImageName != "" && d.ImageID != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Image name", "Image id")
-	}
-	if d.VpcName != "" && d.VpcID.Value != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
-	}
-	if d.SubnetName != "" && d.SubnetID.Value != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
-	}
 	if d.EndpointType != "" && (d.EndpointType != "publicURL" && d.EndpointType != "adminURL" && d.EndpointType != "internalURL") {
 		return fmt.Errorf(errorWrongEndpointType)
 	}
