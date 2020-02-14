@@ -26,13 +26,15 @@ import (
 	"github.com/huaweicloud/golangsdk/openstack"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 )
 
 const (
-	maxAttempts   = 50
-	waitInterval  = 5 * time.Second
-	defaultRegion = "eu-de"
+	maxAttempts         = 50
+	waitInterval        = 5 * time.Second
+	defaultRegion       = "eu-de"
+	defaultEndpointType = huaweisdk.AvailabilityPublic
 )
 
 // Client contains service clients
@@ -46,15 +48,15 @@ type Client struct {
 	endpointType huaweisdk.Availability
 }
 
+var validEndpointTypes = []string{"public", "internal", "admin"}
+
 func getEndpointType(endpointType string) huaweisdk.Availability {
-	eType := "public"
-	if endpointType == "internal" || endpointType == "internalURL" {
-		eType = "internal"
+	for _, eType := range validEndpointTypes {
+		if strings.HasPrefix(endpointType, eType) {
+			return huaweisdk.Availability(eType)
+		}
 	}
-	if endpointType == "admin" || endpointType == "adminURL" {
-		eType = "admin"
-	}
-	return huaweisdk.Availability(eType)
+	return defaultEndpointType
 }
 
 // Authenticate authenticate client in the cloud
@@ -99,9 +101,7 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 	if cloud.RegionName == "" {
 		cloud.RegionName = defaultRegion
 	}
-	if cloud.EndpointType != "" {
-		c.endpointType = getEndpointType(cloud.EndpointType)
-	}
+	c.endpointType = getEndpointType(cloud.EndpointType)
 	c.region = cloud.RegionName
 	return nil
 }

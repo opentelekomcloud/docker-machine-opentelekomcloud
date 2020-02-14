@@ -208,8 +208,9 @@ func (d *Driver) createResources() error {
 
 func (d *Driver) Authenticate() error {
 	opts := &clientconfig.ClientOpts{
-		Cloud:      d.Cloud,
-		RegionName: d.Region,
+		Cloud:        d.Cloud,
+		RegionName:   d.Region,
+		EndpointType: d.EndpointType,
 		AuthInfo: &clientconfig.AuthInfo{
 			AuthURL:           d.AuthURL,
 			Username:          d.Username,
@@ -775,15 +776,9 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	return d.checkConfig()
 }
 
-const (
-	errorBothOptions       string = "both %s and %s must be specified"
-	errorWrongEndpointType string = "endpoint type must be 'publicURL', 'adminURL' or 'internalURL'"
-)
+const errorBothOptions = "both %s and %s must be specified"
 
 func (d *Driver) checkConfig() error {
-	if d.EndpointType != "" && (d.EndpointType != "publicURL" && d.EndpointType != "adminURL" && d.EndpointType != "internalURL") {
-		return fmt.Errorf(errorWrongEndpointType)
-	}
 	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}
