@@ -18,6 +18,11 @@ package opentelekomcloud
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net"
+	"strconv"
+	"strings"
+
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnflag"
@@ -28,10 +33,6 @@ import (
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
-	"io/ioutil"
-	"net"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -101,6 +102,9 @@ func (d *Driver) createVPC() error {
 		Value:         vpc.ID,
 		DriverManaged: true,
 	}
+	if err := d.client.WaitForVPCStatus(d.VpcID.Value, "OK"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -115,6 +119,9 @@ func (d *Driver) createSubnet() error {
 	d.SubnetID = managedSting{
 		Value:         subnet.ID,
 		DriverManaged: true,
+	}
+	if err := d.client.WaitForSubnetStatus(d.SubnetID.Value, "ACTIVE"); err != nil {
+		return err
 	}
 	return nil
 }
