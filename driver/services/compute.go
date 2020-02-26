@@ -19,7 +19,6 @@ package services
 import (
 	"fmt"
 
-	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/floatingips"
@@ -305,17 +304,17 @@ func (c *Client) DeleteSecurityGroup(securityGroupID string) error {
 const floatingIPPoolID = "admin_external_net"
 
 // CreateFloatingIP creates new floating IP in `admin_external_net` pool
-func (c *Client) CreateFloatingIP() (*floatingips.FloatingIP, error) {
-	floatingIp, err := floatingips.Create(c.ComputeV2,
+func (c *Client) CreateFloatingIP() (string, error) {
+	result, err := floatingips.Create(c.ComputeV2,
 		floatingips.CreateOpts{
 			Pool: floatingIPPoolID,
 		},
 	).Extract()
 
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return floatingIp, nil
+	return result.IP, nil
 }
 
 // BindFloatingIP binds floating IP to instance
@@ -357,26 +356,4 @@ func (c *Client) DeleteFloatingIP(floatingIP string) error {
 		return err
 	}
 	return floatingips.Delete(c.ComputeV2, address).Err
-}
-
-// WaitForFloatingIpStatus waits for floatingIp to be in given status
-func (c *Client) WaitForFloatingIpStatus(floatingIpID string, status string) error {
-	return mcnutils.WaitForSpecificOrError(func() (b bool, err error) {
-		curStatus, err := c.GetFloatingIpStatus(floatingIpID)
-		if err != nil {
-			return true, err
-		}
-		if curStatus.Status == "ERROR" {
-			return true, fmt.Errorf("floating Ip `%s` is in error status", floatingIpID)
-		}
-		if curStatus.Status == status {
-			return true, nil
-		}
-		return false, nil
-	}, maxAttempts, waitInterval)
-}
-
-//GetFloatingIpStatus returns details of subnet by ID
-func (c *Client) GetFloatingIpStatus(floatingIpID string) (*floatingips.FloatingIP, error) {
-	return floatingips.Get(c.ComputeV2, floatingIpID).Extract()
 }

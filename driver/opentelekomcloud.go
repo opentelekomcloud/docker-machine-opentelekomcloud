@@ -257,9 +257,6 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
-	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return err
-	}
 	if d.FloatingIP.Value == "" {
 		addr, err := d.client.CreateFloatingIP()
 		if err != nil {
@@ -292,6 +289,9 @@ func (d *Driver) createInstance() error {
 		return err
 	}
 	d.InstanceID = instance.ID
+	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
+		return err
+	}
 	return nil
 }
 
