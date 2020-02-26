@@ -20,14 +20,15 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"github.com/docker/machine/libmachine/version"
-	"github.com/gophercloud/utils/openstack/clientconfig"
-	huaweisdk "github.com/huaweicloud/golangsdk"
-	"github.com/huaweicloud/golangsdk/openstack"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/docker/machine/libmachine/version"
+	"github.com/gophercloud/utils/openstack/clientconfig"
+	huaweisdk "github.com/huaweicloud/golangsdk"
+	"github.com/huaweicloud/golangsdk/openstack"
 )
 
 const (

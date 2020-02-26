@@ -1,10 +1,11 @@
 package services
 
 import (
+	"testing"
+
 	"github.com/huaweicloud/golangsdk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func initNetwork(t *testing.T, client *Client) {

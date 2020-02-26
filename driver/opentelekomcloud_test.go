@@ -1,14 +1,15 @@
 package opentelekomcloud
 
 import (
+	"os"
+	"testing"
+
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 var (
