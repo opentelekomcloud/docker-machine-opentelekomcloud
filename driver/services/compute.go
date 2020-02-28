@@ -18,6 +18,7 @@ package services
 
 import (
 	"fmt"
+
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/floatingips"

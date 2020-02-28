@@ -1,9 +1,10 @@
 package services
 
 import (
+	"testing"
+
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const (

@@ -1,14 +1,15 @@
 package opentelekomcloud
 
 import (
+	"os"
+	"testing"
+
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
-	"testing"
 )
 
 var (
@@ -73,7 +74,9 @@ func TestDriver_Create(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
 	require.NoError(t, cleanupResources(driver))
-	defer assert.NoError(t, cleanupResources(driver))
+	defer func() {
+		assert.NoError(t, cleanupResources(driver))
+	}()
 	require.NoError(t, driver.Authenticate())
 	require.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
@@ -83,15 +86,11 @@ func TestDriver_Start(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
 	require.NoError(t, cleanupResources(driver))
-	defer assert.NoError(t, cleanupResources(driver))
+	defer func() {
+		assert.NoError(t, cleanupResources(driver))
+	}()
 	require.NoError(t, driver.Authenticate())
 	require.NoError(t, driver.Create())
-	defer func() {
-		err := driver.Remove()
-		if err != nil {
-			log.Error(err)
-		}
-	}()
 	assert.NoError(t, driver.Stop())
 	assert.NoError(t, driver.Start())
 	assert.NoError(t, driver.Restart())

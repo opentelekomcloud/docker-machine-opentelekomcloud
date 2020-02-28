@@ -18,6 +18,7 @@ package services
 
 import (
 	"fmt"
+
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"

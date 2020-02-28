@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/docker/machine/libmachine/drivers/plugin"
-	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver"
+	opentelekomcloud "github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver"
 )
 
 func main() {
