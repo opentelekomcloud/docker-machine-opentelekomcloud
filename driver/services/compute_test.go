@@ -1,13 +1,14 @@
 package services
 
 import (
+	"testing"
+
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 const (

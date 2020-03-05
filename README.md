@@ -1,5 +1,5 @@
 # OpenTelekomCloud Docker Machine driver
-[![Build Status](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud.svg?branch=master)](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud)
+[![Build Status](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud.svg)](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud)](https://goreportcard.com/report/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
 [![codecov](https://codecov.io/gh/opentelekomcloud/docker-machine-opentelekomcloud/branch/master/graph/badge.svg)](https://codecov.io/gh/opentelekomcloud/docker-machine-opentelekomcloud)
 ![GitHub](https://img.shields.io/github/license/opentelekomcloud/docker-machine-opentelekomcloud)

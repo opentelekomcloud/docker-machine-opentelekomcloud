@@ -18,6 +18,11 @@ package opentelekomcloud
 
 import (
 	"fmt"
+	"io/ioutil"
+	"net"
+	"strconv"
+	"strings"
+
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnflag"
@@ -28,10 +33,6 @@ import (
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
-	"io/ioutil"
-	"net"
-	"strconv"
-	"strings"
 )
 
 const (
@@ -101,6 +102,9 @@ func (d *Driver) createVPC() error {
 		Value:         vpc.ID,
 		DriverManaged: true,
 	}
+	if err := d.client.WaitForVPCStatus(d.VpcID.Value, "OK"); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -115,6 +119,9 @@ func (d *Driver) createSubnet() error {
 	d.SubnetID = managedSting{
 		Value:         subnet.ID,
 		DriverManaged: true,
+	}
+	if err := d.client.WaitForSubnetStatus(d.SubnetID.Value, "ACTIVE"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -136,40 +143,24 @@ func (d *Driver) createSecGroup() error {
 
 const notFound = "%s not found by name `%s`"
 
-func (d *Driver) createResources() error {
-	// network init
-	if err := d.client.InitNetwork(); err != nil {
-		return err
-	}
+// Resolve name to IDs where possible
+func (d *Driver) resolveIDs() error {
 	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
 			return err
 		}
-		if vpcID != "" {
-			d.VpcID = managedSting{vpcID, false}
-		}
-		if err := d.createVPC(); err != nil {
-			return err
-		}
+		d.VpcID = managedSting{Value: vpcID}
 	}
+
 	if d.SubnetID.Value == "" && d.SubnetName != "" {
 		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
 			return err
 		}
-		if subnetID != "" {
-			d.SubnetID = managedSting{subnetID, false}
-		}
-		if err := d.createSubnet(); err != nil {
-			return err
-		}
+		d.SubnetID = managedSting{Value: subnetID}
 	}
 
-	// compute init
-	if err := d.initCompute(); err != nil {
-		return err
-	}
 	if d.FlavorID == "" && d.FlavorName != "" {
 		flavID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
@@ -190,27 +181,43 @@ func (d *Driver) createResources() error {
 		}
 		d.ImageID = imageID
 	}
-
 	if d.SecurityGroupID.Value == "" && d.SecurityGroup != "" {
 		secID, err := d.client.FindSecurityGroup(d.SecurityGroup)
 		if err != nil {
 			return err
 		}
-		if secID != "" {
-			d.SecurityGroupID = managedSting{secID, false}
-		}
-		if err := d.createSecGroup(); err != nil {
-			return err
-		}
+		d.SecurityGroupID = managedSting{Value: secID}
 	}
+	return nil
+}
 
+func (d *Driver) createResources() error {
+	// network init
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if err := d.initCompute(); err != nil {
+	}
+	if err := d.resolveIDs(); err != nil {
+		return err
+	}
+	if err := d.createVPC(); err != nil {
+		return err
+	}
+	if err := d.createSubnet(); err != nil {
+		return err
+	}
+	if err := d.createSecGroup(); err != nil {
+		return err
+	}
 	return nil
 }
 
 func (d *Driver) Authenticate() error {
 	opts := &clientconfig.ClientOpts{
-		Cloud:      d.Cloud,
-		RegionName: d.Region,
+		Cloud:        d.Cloud,
+		RegionName:   d.Region,
+		EndpointType: d.EndpointType,
 		AuthInfo: &clientconfig.AuthInfo{
 			AuthURL:           d.AuthURL,
 			Username:          d.Username,
@@ -250,9 +257,6 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
-	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return err
-	}
 	if d.FloatingIP.Value == "" {
 		addr, err := d.client.CreateFloatingIP()
 		if err != nil {
@@ -285,6 +289,9 @@ func (d *Driver) createInstance() error {
 		return err
 	}
 	d.InstanceID = instance.ID
+	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -776,28 +783,9 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	return d.checkConfig()
 }
 
-const (
-	errorExclusiveOptions  string = "either %s or %s must be specified, not both"
-	errorBothOptions       string = "both %s and %s must be specified"
-	errorWrongEndpointType string = "endpoint type must be 'publicURL', 'adminURL' or 'internalURL'"
-)
+const errorBothOptions = "both %s and %s must be specified"
 
 func (d *Driver) checkConfig() error {
-	if d.FlavorName != "" && d.FlavorID != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Flavor name", "Flavor id")
-	}
-	if d.ImageName != "" && d.ImageID != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Image name", "Image id")
-	}
-	if d.VpcName != "" && d.VpcID.Value != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
-	}
-	if d.SubnetName != "" && d.SubnetID.Value != "" {
-		return fmt.Errorf(errorExclusiveOptions, "Network name", "Network id")
-	}
-	if d.EndpointType != "" && (d.EndpointType != "publicURL" && d.EndpointType != "adminURL" && d.EndpointType != "internalURL") {
-		return fmt.Errorf(errorWrongEndpointType)
-	}
 	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}

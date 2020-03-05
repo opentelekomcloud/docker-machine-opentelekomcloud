@@ -20,3 +20,6 @@ bin/
 .idea/
 clouds.yaml
 *_rsa
+
+.vscode
+driver/machines
