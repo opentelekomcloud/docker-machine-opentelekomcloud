@@ -62,10 +62,9 @@ func cleanupResources(t *testing.T) {
 			log.Error(err)
 		}
 	}()
-	sg, err := c.FindSecurityGroup(sgName)
-	require.NoError(t, err)
-	if sg != "" {
-		require.NoError(t, c.DeleteSecurityGroup(sg))
+	sg, _ := c.FindSecurityGroups([]string{sgName})
+	for _, sgID := range sg {
+		assert.NoError(t, c.DeleteSecurityGroup(sgID))
 	}
 	vpcID, _ := c.FindVPC(vpcName)
 	if vpcID == "" {
@@ -100,9 +99,9 @@ func TestClient_CreateSecurityGroup(t *testing.T) {
 	sg, err := client.CreateSecurityGroup(sgName, 22)
 	require.NoError(t, err)
 
-	sgID, err := client.FindSecurityGroup(sgName)
+	sgIDs, err := client.FindSecurityGroups([]string{sgName})
 	assert.NoError(t, err)
-	assert.EqualValuesf(t, sg.ID, sgID, invalidFind, "sec group")
+	assert.EqualValuesf(t, sg.ID, sgIDs[0], invalidFind, "sec group")
 
 	assert.NoError(t, client.DeleteSecurityGroup(sg.ID))
 }

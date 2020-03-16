@@ -7,9 +7,10 @@ import (
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/huaweicloud/golangsdk"
-	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 )
 
 var (
@@ -19,7 +20,13 @@ var (
 	instanceName = services.RandomString(15, "machine-")
 )
 
-func defaultDriver() (*Driver, error) {
+var defaultFlags = map[string]interface{}{
+	"otc-cloud":       "otc",
+	"otc-subnet-name": subnetName,
+	"otc-vpc-name":    vpcName,
+}
+
+func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 	driver := NewDriver(instanceName, "")
 
 	storePath := driver.ResolveStorePath("")
@@ -30,21 +37,21 @@ func defaultDriver() (*Driver, error) {
 	}
 
 	flags := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"otc-cloud":       "otc",
-			"otc-subnet-name": subnetName,
-			"otc-vpc-name":    vpcName,
-			"otc-sec-group":   secGroup,
-		},
+		FlagsValues: driverFlags,
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	if err := driver.SetConfigFromFlags(flags); err != nil {
 		return nil, err
 	}
+	driver.ManagedSecurityGroup = secGroup
 	if err := driver.Authenticate(); err != nil {
 		return nil, err
 	}
 	return driver, nil
+}
+
+func defaultDriver() (*Driver, error) {
+	return newDriverFromFlags(defaultFlags)
 }
 
 func TestDriver_SetConfigFromFlags(t *testing.T) {
@@ -56,7 +63,7 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, defaultSecurityGroup, driver.SecurityGroup)
+	assert.Equal(t, defaultSecurityGroup, driver.ManagedSecurityGroup)
 	assert.Equal(t, defaultVpcName, driver.VpcName)
 	assert.Equal(t, defaultSubnetName, driver.SubnetName)
 	assert.Equal(t, defaultFlavor, driver.FlavorName)
@@ -132,14 +139,14 @@ func cleanupResources(driver *Driver) error {
 			log.Error(err)
 		}
 	}
-	sg, err := driver.client.FindSecurityGroup(secGroup)
-	if err != nil {
-		return err
-	}
-	if sg != "" {
+	sgIDs, _ := driver.client.FindSecurityGroups(driver.SecurityGroups)
+	for _, sg := range sgIDs {
 		if err := driver.client.DeleteSecurityGroup(sg); err != nil {
 			return err
 		}
+	}
+	if driver.ManagedSecurityGroupID != "" {
+		_ = driver.client.DeleteSecurityGroup(driver.ManagedSecurityGroupID)
 	}
 	vpcID, _ := driver.client.FindVPC(vpcName)
 	if vpcID == "" {
@@ -154,4 +161,45 @@ func cleanupResources(driver *Driver) error {
 		}
 	}
 	return driver.deleteVPC()
+}
+
+func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
+	preDriver, err := defaultDriver()
+	require.NoError(t, err)
+	require.NoError(t, preDriver.initCompute())
+	newSG := services.RandomString(10, "nsg-")
+	sg, err := preDriver.client.CreateSecurityGroup(newSG, 24)
+	assert.NoError(t, err)
+
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":       "otc",
+			"otc-subnet-name": subnetName,
+			"otc-vpc-name":    vpcName,
+			"otc-sec-groups":  sg.Name,
+		})
+	require.NoError(t, err)
+	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initNetwork())
+	defer func() {
+		if err := cleanupResources(driver); err != nil {
+			log.Error(err)
+		}
+	}()
+	assert.NoError(t, driver.Create())
+
+	instance, err := driver.client.GetInstanceStatus(driver.InstanceID)
+	assert.NoError(t, err)
+	assert.Len(t, instance.SecurityGroups, 2)
+
+	var sgs []string
+	for _, sg := range instance.SecurityGroups {
+		sgName := sg["name"].(string)
+		sgs = append(sgs, sgName)
+	}
+
+	assert.Contains(t, sgs, driver.SecurityGroups[0])
+	assert.Contains(t, sgs, driver.ManagedSecurityGroup)
+	assert.NoError(t, driver.Remove())
+
 }

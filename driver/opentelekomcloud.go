@@ -32,6 +32,7 @@ import (
 	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
+
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 )
 
@@ -58,36 +59,38 @@ type managedSting struct {
 // Driver for docker-machine
 type Driver struct {
 	*drivers.BaseDriver
-	Cloud            string
-	AuthURL          string
-	CACert           string
-	ValidateCert     bool
-	DomainID         string
-	DomainName       string
-	Username         string
-	Password         string
-	ProjectName      string
-	ProjectID        string
-	Region           string
-	AvailabilityZone string
-	EndpointType     string
-	InstanceID       string
-	FlavorName       string
-	FlavorID         string
-	ImageName        string
-	ImageID          string
-	KeyPairName      managedSting
-	VpcName          string
-	VpcID            managedSting
-	SubnetName       string
-	SubnetID         managedSting
-	PrivateKeyFile   string
-	SecurityGroup    string
-	SecurityGroupID  managedSting
-	FloatingIP       managedSting
-	Token            string
-	IPVersion        int
-	client           *services.Client
+	Cloud                  string       `json:"cloud,omitempty"`
+	AuthURL                string       `json:"auth_url,omitempty"`
+	CACert                 string       `json:"ca_cert,omitempty"`
+	ValidateCert           bool         `json:"validate_cert"`
+	DomainID               string       `json:"domain_id,omitempty"`
+	DomainName             string       `json:"domain_name,omitempty"`
+	Username               string       `json:"username,omitempty"`
+	Password               string       `json:"password,omitempty"`
+	ProjectName            string       `json:"project_name,omitempty"`
+	ProjectID              string       `json:"project_id,omitempty"`
+	Region                 string       `json:"region"`
+	AvailabilityZone       string       `json:"az"`
+	EndpointType           string       `json:"endpoint_type,omitempty"`
+	InstanceID             string       `json:"instance_id"`
+	FlavorName             string       `json:"-"`
+	FlavorID               string       `json:"flavor_id"`
+	ImageName              string       `json:"-"`
+	ImageID                string       `json:"image_id"`
+	KeyPairName            managedSting `json:"key_pair"`
+	VpcName                string       `json:"-"`
+	VpcID                  managedSting `json:"vpc_id"`
+	SubnetName             string       `json:"-"`
+	SubnetID               managedSting `json:"subnet_id"`
+	PrivateKeyFile         string       `json:"private_key"`
+	SecurityGroups         []string     `json:"-"`
+	SecurityGroupIDs       []string     `json:"security_groups"`
+	ManagedSecurityGroup   string       `json:"-"`
+	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
+	FloatingIP             managedSting `json:"floating_ip"`
+	Token                  string       `json:"token"`
+	IPVersion              int          `json:"ip_version"`
+	client                 *services.Client
 }
 
 func (d *Driver) createVPC() error {
@@ -127,17 +130,14 @@ func (d *Driver) createSubnet() error {
 }
 
 func (d *Driver) createSecGroup() error {
-	if d.SecurityGroupID.Value != "" {
+	if d.ManagedSecurityGroupID != "" || d.ManagedSecurityGroup == "" {
 		return nil
 	}
-	secGrp, err := d.client.CreateSecurityGroup(d.SecurityGroup, d.SSHPort)
+	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup, d.SSHPort)
 	if err != nil {
 		return err
 	}
-	d.SecurityGroupID = managedSting{
-		Value:         secGrp.ID,
-		DriverManaged: true,
-	}
+	d.ManagedSecurityGroupID = sg.ID
 	return nil
 }
 
@@ -181,13 +181,11 @@ func (d *Driver) resolveIDs() error {
 		}
 		d.ImageID = imageID
 	}
-	if d.SecurityGroupID.Value == "" && d.SecurityGroup != "" {
-		secID, err := d.client.FindSecurityGroup(d.SecurityGroup)
-		if err != nil {
-			return err
-		}
-		d.SecurityGroupID = managedSting{Value: secID}
+	sgIDs, err := d.client.FindSecurityGroups(d.SecurityGroups)
+	if err != nil {
+		return err
 	}
+	d.SecurityGroupIDs = sgIDs
 	return nil
 }
 
@@ -277,11 +275,15 @@ func (d *Driver) createInstance() error {
 	if err := d.initCompute(); err != nil {
 		return err
 	}
+	secGroups := d.SecurityGroupIDs
+	if d.ManagedSecurityGroupID != "" {
+		secGroups = append(secGroups, d.ManagedSecurityGroupID)
+	}
 	serverOpts := &servers.CreateOpts{
 		Name:             d.MachineName,
 		FlavorRef:        d.FlavorID,
 		ImageRef:         d.ImageID,
-		SecurityGroups:   []string{d.SecurityGroup},
+		SecurityGroups:   secGroups,
 		AvailabilityZone: d.AvailabilityZone,
 	}
 	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value)
@@ -420,7 +422,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.StringFlag{
 			Name:   "otc-private-key-file",
 			EnvVar: "OS_PRIVATE_KEY_FILE",
-			Usage:  "Private keyfile to use for SSH (absolute path)",
+			Usage:  "Private key file to use for SSH (absolute path)",
 			Value:  "",
 		},
 		mcnflag.StringFlag{
@@ -434,10 +436,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "OpenTelekomCloud authorization token",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-sec-group",
+			Name:   "otc-sec-groups",
 			EnvVar: "OS_SECURITY_GROUP",
-			Usage:  "Single security group to use",
-			Value:  defaultSecurityGroup,
+			Usage:  "Existing security groups to use, separated by comma",
+			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-floating-ip",
@@ -471,6 +473,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.BoolFlag{
 			Name:  "otc-validate-cert",
 			Usage: "Enable certification validation",
+		},
+		mcnflag.BoolFlag{
+			Name:  "otc-skip-default-sg",
+			Usage: "Don't create default security group",
 		},
 	}
 }
@@ -615,8 +621,8 @@ func (d *Driver) Remove() error {
 	if err := d.deleteInstance(); err != nil {
 		return err
 	}
-	if d.SecurityGroupID.DriverManaged {
-		if err := d.client.DeleteSecurityGroup(d.SecurityGroupID.Value); err != nil {
+	if d.ManagedSecurityGroupID != "" {
+		if err := d.client.DeleteSecurityGroup(d.ManagedSecurityGroupID); err != nil {
 			return err
 		}
 	}
@@ -771,7 +777,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.VpcName = flags.String("otc-vpc-name")
 	d.SubnetID = managedSting{Value: flags.String("otc-subnet-id")}
 	d.SubnetName = flags.String("otc-subnet-name")
-	d.SecurityGroup = flags.String("otc-sec-group")
 	d.FloatingIP = managedSting{Value: flags.String("otc-floating-ip")}
 	d.IPVersion = flags.Int("otc-ip-version")
 	d.SSHUser = flags.String("otc-ssh-user")
@@ -779,6 +784,15 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.KeyPairName = managedSting{Value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
+
+	if sg := flags.String("otc-sec-groups"); sg != "" {
+		d.SecurityGroups = strings.Split(sg, ",")
+	}
+
+	if !flags.Bool("otc-skip-default-sg") {
+		d.ManagedSecurityGroup = defaultSecurityGroup
+	}
+
 	d.SetSwarmConfigFromFlags(flags)
 	return d.checkConfig()
 }
