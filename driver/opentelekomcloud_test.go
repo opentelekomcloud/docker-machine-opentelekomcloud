@@ -182,9 +182,7 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	require.NoError(t, driver.initCompute())
 	require.NoError(t, driver.initNetwork())
 	defer func() {
-		if err := cleanupResources(driver); err != nil {
-			log.Error(err)
-		}
+		assert.NoError(t, cleanupResources(driver))
 	}()
 	assert.NoError(t, driver.Create())
 
