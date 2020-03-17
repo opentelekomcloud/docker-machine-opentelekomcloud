@@ -114,6 +114,9 @@ func cleanupResources(driver *Driver) error {
 	if err != nil {
 		return err
 	}
+	if err := driver.client.DeleteFloatingIP(driver.FloatingIP.Value); err != nil {
+		log.Error(err)
+	}
 	if instanceID != "" {
 		driver.InstanceID = instanceID
 		err := driver.deleteInstance()
@@ -137,12 +140,6 @@ func cleanupResources(driver *Driver) error {
 		err := driver.client.DeleteKeyPair(driver.KeyPairName.Value)
 		if err != nil {
 			log.Error(err)
-		}
-	}
-	sgIDs, _ := driver.client.FindSecurityGroups(driver.SecurityGroups)
-	for _, sg := range sgIDs {
-		if err := driver.client.DeleteSecurityGroup(sg); err != nil {
-			return err
 		}
 	}
 	if driver.ManagedSecurityGroupID != "" {
@@ -170,6 +167,9 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	newSG := services.RandomString(10, "nsg-")
 	sg, err := preDriver.client.CreateSecurityGroup(newSG, 24)
 	assert.NoError(t, err)
+	defer func() {
+		assert.NoError(t, preDriver.client.DeleteSecurityGroup(sg.ID))
+	}()
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
