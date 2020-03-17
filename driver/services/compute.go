@@ -18,6 +18,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
@@ -276,24 +277,45 @@ func (c *Client) CreateSecurityGroup(securityGroupName string, sshPort int) (*se
 	return sg, nil
 }
 
-// FindSecurityGroup find security group by name
-func (c *Client) FindSecurityGroup(securityGroupName string) (string, error) {
-	pager := secgroups.List(c.ComputeV2)
-	securityGroup := ""
-	err := pager.EachPage(func(page pagination.Page) (b bool, err error) {
-		groups, err := secgroups.ExtractSecurityGroups(page)
-		if err != nil {
-			return false, err
-		}
-		for _, group := range groups {
-			if group.Name == securityGroupName {
-				securityGroup = group.ID
-				return false, nil
+// found seg groups removed from source slice returning (found, missing, error)
+func findSGInPagerByNameOrID(secGroups []string, pager pagination.Pager) ([]string, []string, error) {
+	var secGroupIDs []string
+	page, err := pager.AllPages()
+	if err != nil {
+		return nil, nil, err
+	}
+	groups, err := secgroups.ExtractSecurityGroups(page)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, found := range groups {
+		idx := -1
+		for i, grp := range secGroups {
+			if grp == found.ID || grp == found.Name {
+				idx = i
+				break
 			}
 		}
-		return true, nil
-	})
-	return securityGroup, err
+		if idx >= 0 {
+			secGroups = append(secGroups[:idx], secGroups[idx+1:]...)
+			secGroupIDs = append(secGroupIDs, found.ID)
+		}
+	}
+	return secGroupIDs, secGroups, nil
+}
+
+// FindSecurityGroups get slice of security group IDs from given security group names
+func (c *Client) FindSecurityGroups(secGroups []string) ([]string, error) {
+	pager := secgroups.List(c.ComputeV2)
+	secGroupIDs, missing, err := findSGInPagerByNameOrID(secGroups, pager)
+	if err != nil {
+		return nil, err
+	}
+	if len(missing) > 0 {
+		groupsMess := strings.Join(missing, ", ")
+		return secGroupIDs, fmt.Errorf("some security groups failed to be found: %v", groupsMess)
+	}
+	return secGroupIDs, nil
 }
 
 // DeleteSecurityGroup deletes managed security group
