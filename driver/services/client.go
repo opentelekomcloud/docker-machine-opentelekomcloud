@@ -72,12 +72,19 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 	}
 
 	// mimic behaviour of OTC terraform provider
-	cloud, _ := clientconfig.GetCloudFromYAML(opts)
-	if ao.DomainID == "" {
-		ao.DomainID = cloud.AuthInfo.ProjectDomainID
-	}
-	if ao.DomainName == "" {
-		ao.DomainName = cloud.AuthInfo.ProjectDomainName
+	if opts.Cloud != "" {
+		cloud, _ := clientconfig.GetCloudFromYAML(opts)
+		if ao.DomainID == "" {
+			ao.DomainID = cloud.AuthInfo.ProjectDomainID
+		}
+		if ao.DomainName == "" {
+			ao.DomainName = cloud.AuthInfo.ProjectDomainName
+		}
+		if cloud.RegionName == "" {
+			cloud.RegionName = defaultRegion
+		}
+		c.endpointType = getEndpointType(cloud.EndpointType)
+		c.region = cloud.RegionName
 	}
 
 	userAgent := fmt.Sprintf("docker-machine/v%d", version.APIVersion)
@@ -99,11 +106,6 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 	}
 	c.Provider = authClient
 	c.Provider.UserAgent.Prepend(userAgent)
-	if cloud.RegionName == "" {
-		cloud.RegionName = defaultRegion
-	}
-	c.endpointType = getEndpointType(cloud.EndpointType)
-	c.region = cloud.RegionName
 	return nil
 }
 
