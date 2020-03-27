@@ -85,6 +85,18 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 		}
 		c.endpointType = getEndpointType(cloud.EndpointType)
 		c.region = cloud.RegionName
+	} else {
+		if ao.DomainID == "" {
+			ao.DomainID = opts.AuthInfo.ProjectDomainID
+		}
+		if ao.DomainName == "" {
+			ao.DomainName = opts.AuthInfo.ProjectDomainName
+		}
+		if opts.RegionName == "" {
+			opts.RegionName = defaultRegion
+		}
+		c.endpointType = getEndpointType(opts.EndpointType)
+		c.region = opts.RegionName
 	}
 
 	userAgent := fmt.Sprintf("docker-machine/v%d", version.APIVersion)
