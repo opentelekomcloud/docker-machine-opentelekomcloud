@@ -37,7 +37,7 @@ import (
 )
 
 const (
-	driverName           = "opentelekomcloud"
+	driverName           = "otc"
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-03"
 	defaultFlavor        = "s2.large.2"

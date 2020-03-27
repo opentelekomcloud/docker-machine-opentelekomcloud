@@ -1,9 +1,9 @@
 export GO111MODULE=on
 export PATH:=/usr/local/go/bin:$(PATH)
 exec_path := /usr/local/bin/
-exec_name := docker-machine-driver-opentelekomcloud
+exec_name := docker-machine-driver-otc
 
-VERSION := 0.1.2
+VERSION := 0.2.1b1
 
 
 default: test build
@@ -47,6 +47,6 @@ install:
 	@echo "Driver installed to $(exec_path)$(exec_name)"
 
 release: build-all
-	@gzip -fqS "-$(VERSION)-linux-amd64.gz" "./bin/$(exec_name)"
-	@zip -qmD ./bin/docker-machine-driver-opentelekomcloud-$(VERSION)-win-amd64.zip ./bin/$(exec_name).exe
+	@tar -czf "./bin/$(exec_name)-$(VERSION)-linux-amd64.tgz" "./bin/$(exec_name)"
+	@zip -qmD ./bin/$(exec_name)-$(VERSION)-win-amd64.zip ./bin/$(exec_name).exe
 	@echo "Release versions are built"
