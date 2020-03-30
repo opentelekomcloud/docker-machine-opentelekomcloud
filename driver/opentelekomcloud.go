@@ -224,7 +224,6 @@ func (d *Driver) Authenticate() error {
 			ProjectID:         d.ProjectID,
 			ProjectDomainName: d.DomainName,
 			ProjectDomainID:   d.DomainID,
-			DefaultDomain:     d.DomainName,
 			Token:             d.Token,
 		},
 	}
