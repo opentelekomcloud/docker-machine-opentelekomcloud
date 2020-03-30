@@ -77,6 +77,17 @@ func TestDriver_Auth(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDriver_AuthCreds(t *testing.T) {
+	_, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-domain-name":  os.Getenv("OTC_DOMAIN_NAME"),
+			"otc-project-name": os.Getenv("OTC_PROJECT_NAME"),
+			"otc-username":     os.Getenv("OTC_USERNAME"),
+			"otc-password":     os.Getenv("OTC_PASSWORD"),
+		})
+	assert.NoError(t, err)
+}
+
 func TestDriver_Create(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
