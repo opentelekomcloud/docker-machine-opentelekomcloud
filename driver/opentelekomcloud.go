@@ -69,14 +69,14 @@ type Driver struct {
 	Password               string       `json:"password,omitempty"`
 	ProjectName            string       `json:"project_name,omitempty"`
 	ProjectID              string       `json:"project_id,omitempty"`
-	Region                 string       `json:"region"`
-	AvailabilityZone       string       `json:"az"`
+	Region                 string       `json:"-"`
+	AvailabilityZone       string       `json:"-"`
 	EndpointType           string       `json:"endpoint_type,omitempty"`
 	InstanceID             string       `json:"instance_id"`
 	FlavorName             string       `json:"-"`
-	FlavorID               string       `json:"flavor_id"`
+	FlavorID               string       `json:"-"`
 	ImageName              string       `json:"-"`
-	ImageID                string       `json:"image_id"`
+	ImageID                string       `json:"-"`
 	KeyPairName            managedSting `json:"key_pair"`
 	VpcName                string       `json:"-"`
 	VpcID                  managedSting `json:"vpc_id"`
@@ -84,12 +84,12 @@ type Driver struct {
 	SubnetID               managedSting `json:"subnet_id"`
 	PrivateKeyFile         string       `json:"private_key"`
 	SecurityGroups         []string     `json:"-"`
-	SecurityGroupIDs       []string     `json:"security_groups"`
+	SecurityGroupIDs       []string     `json:"-"`
 	ManagedSecurityGroup   string       `json:"-"`
 	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
 	FloatingIP             managedSting `json:"floating_ip"`
-	Token                  string       `json:"token"`
-	IPVersion              int          `json:"ip_version"`
+	Token                  string       `json:"token,omitempty"`
+	IPVersion              int          `json:"-"`
 	client                 *services.Client
 }
 
