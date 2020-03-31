@@ -37,6 +37,7 @@ import (
 )
 
 const (
+	dockerPort           = 2376
 	driverName           = "otc"
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-03"
@@ -49,6 +50,19 @@ const (
 	defaultAuthURL       = "https://iam.eu-de.otc.t-systems.com/v3"
 	defaultVpcName       = "vpc-docker-machine"
 	defaultSubnetName    = "subnet-docker-machine"
+	k8sGroupName         = "sg-k8s"
+)
+
+var (
+	// https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#check-required-ports
+	k8sPorts = []services.PortRange{
+		// control-plane node(s)
+		{From: 6443},
+		{From: 2379, To: 2380},
+		{From: 10250, To: 10252},
+		// worker node(s)
+		{From: 30000, To: 32767},
+	}
 )
 
 type managedSting struct {
@@ -87,6 +101,8 @@ type Driver struct {
 	SecurityGroupIDs       []string     `json:"-"`
 	ManagedSecurityGroup   string       `json:"-"`
 	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
+	K8sSecurityGroup       string       `json:"-"`
+	K8sSecurityGroupID     string       `json:"k8s_security_group,omitempty"`
 	FloatingIP             managedSting `json:"floating_ip"`
 	Token                  string       `json:"token,omitempty"`
 	IPVersion              int          `json:"-"`
@@ -128,12 +144,26 @@ func (d *Driver) createSubnet() error {
 	}
 	return nil
 }
+func (d *Driver) createK8sGroup() error {
+	if d.K8sSecurityGroup != "" || d.K8sSecurityGroupID != "" {
+		return nil
+	}
+	sg, err := d.client.CreateSecurityGroup(d.K8sSecurityGroup, k8sPorts...)
+	if err != nil {
+		return err
+	}
+	d.K8sSecurityGroupID = sg.ID
+	return nil
+}
 
-func (d *Driver) createSecGroup() error {
+func (d *Driver) createDefaultGroup() error {
 	if d.ManagedSecurityGroupID != "" || d.ManagedSecurityGroup == "" {
 		return nil
 	}
-	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup, d.SSHPort)
+	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup,
+		services.PortRange{From: d.SSHPort},
+		services.PortRange{From: dockerPort},
+	)
 	if err != nil {
 		return err
 	}
@@ -205,9 +235,13 @@ func (d *Driver) createResources() error {
 	if err := d.createSubnet(); err != nil {
 		return err
 	}
-	if err := d.createSecGroup(); err != nil {
+	if err := d.createDefaultGroup(); err != nil {
 		return err
 	}
+	if err := d.createK8sGroup(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -477,6 +511,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:  "otc-skip-default-sg",
 			Usage: "Don't create default security group",
 		},
+		mcnflag.BoolFlag{
+			Name:  "otc-k8s-group",
+			Usage: "Create security group with k8s ports allowed",
+		},
 	}
 }
 
@@ -508,7 +546,7 @@ func (d *Driver) GetURL() (string, error) {
 	if err != nil || ip == "" {
 		return "", err
 	}
-	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, strconv.Itoa(services.DockerPort))), nil
+	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, strconv.Itoa(dockerPort))), nil
 }
 
 func (d *Driver) GetState() (state.State, error) {
@@ -790,6 +828,10 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 
 	if !flags.Bool("otc-skip-default-sg") {
 		d.ManagedSecurityGroup = defaultSecurityGroup
+	}
+
+	if flags.Bool("otc-k8s-group") {
+		d.K8sSecurityGroup = k8sGroupName
 	}
 
 	d.SetSwarmConfigFromFlags(flags)
