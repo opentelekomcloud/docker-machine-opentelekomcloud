@@ -243,36 +243,43 @@ func (c *Client) FindImage(imageName string) (string, error) {
 const (
 	cidrAll     = "0.0.0.0/0"
 	tcpProtocol = "TCP"
-	// port used by docker by default
-	DockerPort = 2376
 )
 
-func (c *Client) addInboundRule(secGroupID string, sshPort int) error {
+func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int) error {
+
 	ruleOpts := secgroups.CreateRuleOpts{
 		ParentGroupID: secGroupID,
-		FromPort:      sshPort,
-		ToPort:        sshPort,
+		FromPort:      fromPort,
+		ToPort:        toPort,
 		CIDR:          cidrAll,
 		IPProtocol:    tcpProtocol,
 	}
 	return secgroups.CreateRule(c.ComputeV2, ruleOpts).Err
 }
 
+// PortRange is simple sec rule port range container
+type PortRange struct {
+	From int
+	To   int
+}
+
 // CreateSecurityGroup creates new sec group and returns group ID
-func (c *Client) CreateSecurityGroup(securityGroupName string, sshPort int) (*secgroups.SecurityGroup, error) {
+func (c *Client) CreateSecurityGroup(securityGroupName string, ports ...PortRange) (*secgroups.SecurityGroup, error) {
 	opts := secgroups.CreateOpts{
 		Name:        securityGroupName,
-		Description: "Docker Machine security group",
+		Description: "Automatically created by docker-machine for OTC",
 	}
 	sg, err := secgroups.Create(c.ComputeV2, opts).Extract()
 	if err != nil {
 		return nil, err
 	}
-	if err := c.addInboundRule(sg.ID, sshPort); err != nil {
-		return nil, err
-	}
-	if err := c.addInboundRule(sg.ID, DockerPort); err != nil {
-		return nil, err
+	for _, port := range ports {
+		if port.To == 0 {
+			port.To = port.From
+		}
+		if err := c.addInboundRule(sg.ID, port.From, port.To); err != nil {
+			return nil, err
+		}
 	}
 	return sg, nil
 }
@@ -321,6 +328,23 @@ func (c *Client) FindSecurityGroups(secGroups []string) ([]string, error) {
 // DeleteSecurityGroup deletes managed security group
 func (c *Client) DeleteSecurityGroup(securityGroupID string) error {
 	return secgroups.Delete(c.ComputeV2, securityGroupID).Err
+}
+
+// WaitForGroupDeleted polls sec group until it returns 404
+func (c *Client) WaitForGroupDeleted(securityGroupID string) error {
+	err := golangsdk.WaitFor(60, func() (b bool, e error) {
+		err := secgroups.Get(c.ComputeV2, securityGroupID).Err
+		if err == nil {
+			return false, nil
+		}
+		switch err.(type) {
+		case golangsdk.ErrDefault404:
+			return true, nil
+		default:
+			return true, err
+		}
+	})
+	return err
 }
 
 const floatingIPPoolID = "admin_external_net"

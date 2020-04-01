@@ -125,8 +125,10 @@ func cleanupResources(driver *Driver) error {
 	if err != nil {
 		return err
 	}
-	if err := driver.client.DeleteFloatingIP(driver.FloatingIP.Value); err != nil {
-		log.Error(err)
+	if driver.FloatingIP.DriverManaged && driver.FloatingIP.Value != "" {
+		if err := driver.client.DeleteFloatingIP(driver.FloatingIP.Value); err != nil {
+			log.Error(err)
+		}
 	}
 	if instanceID != "" {
 		driver.InstanceID = instanceID
@@ -156,6 +158,9 @@ func cleanupResources(driver *Driver) error {
 	if driver.ManagedSecurityGroupID != "" {
 		_ = driver.client.DeleteSecurityGroup(driver.ManagedSecurityGroupID)
 	}
+	if driver.K8sSecurityGroupID != "" {
+		_ = driver.client.DeleteSecurityGroup(driver.K8sSecurityGroupID)
+	}
 	vpcID, _ := driver.client.FindVPC(vpcName)
 	if vpcID == "" {
 		return nil
@@ -176,7 +181,7 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, preDriver.initCompute())
 	newSG := services.RandomString(10, "nsg-")
-	sg, err := preDriver.client.CreateSecurityGroup(newSG, 24)
+	sg, err := preDriver.client.CreateSecurityGroup(newSG, services.PortRange{From: 24})
 	assert.NoError(t, err)
 	defer func() {
 		assert.NoError(t, preDriver.client.DeleteSecurityGroup(sg.ID))
