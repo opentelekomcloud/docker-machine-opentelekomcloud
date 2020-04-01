@@ -145,7 +145,7 @@ func (d *Driver) createSubnet() error {
 	return nil
 }
 func (d *Driver) createK8sGroup() error {
-	if d.K8sSecurityGroup != "" || d.K8sSecurityGroupID != "" {
+	if d.K8sSecurityGroupID != "" || d.K8sSecurityGroup == "" {
 		return nil
 	}
 	sg, err := d.client.CreateSecurityGroup(d.K8sSecurityGroup, k8sPorts...)
@@ -651,6 +651,24 @@ func (d *Driver) deleteVPC() error {
 	return nil
 }
 
+func (d *Driver) deleteSecGroups() error {
+	if err := d.initCompute(); err != nil {
+		return err
+	}
+	for _, id := range []string{d.ManagedSecurityGroupID, d.K8sSecurityGroupID} {
+		if id == "" {
+			continue
+		}
+		if err := d.client.DeleteSecurityGroup(id); err != nil {
+			return err
+		}
+		if err := d.client.WaitForGroupDeleted(id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *Driver) Remove() error {
 	if err := d.Authenticate(); err != nil {
 		return err
@@ -658,22 +676,20 @@ func (d *Driver) Remove() error {
 	if err := d.deleteInstance(); err != nil {
 		return err
 	}
-	if d.ManagedSecurityGroupID != "" {
-		if err := d.client.DeleteSecurityGroup(d.ManagedSecurityGroupID); err != nil {
-			return err
-		}
-	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
 			return err
 		}
 	}
-	if d.FloatingIP.DriverManaged {
+	if d.FloatingIP.DriverManaged && d.FloatingIP.Value != "" {
 		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
 			return err
 		}
 	}
 	if err := d.deleteSubnet(); err != nil {
+		return err
+	}
+	if err := d.deleteSecGroups(); err != nil {
 		return err
 	}
 	if err := d.deleteVPC(); err != nil {

@@ -330,6 +330,23 @@ func (c *Client) DeleteSecurityGroup(securityGroupID string) error {
 	return secgroups.Delete(c.ComputeV2, securityGroupID).Err
 }
 
+// WaitForGroupDeleted polls sec group until it returns 404
+func (c *Client) WaitForGroupDeleted(securityGroupID string) error {
+	err := golangsdk.WaitFor(60, func() (b bool, e error) {
+		err := secgroups.Get(c.ComputeV2, securityGroupID).Err
+		if err == nil {
+			return false, nil
+		}
+		switch err.(type) {
+		case golangsdk.ErrDefault404:
+			return true, nil
+		default:
+			return true, err
+		}
+	})
+	return err
+}
+
 const floatingIPPoolID = "admin_external_net"
 
 // CreateFloatingIP creates new floating IP in `admin_external_net` pool
