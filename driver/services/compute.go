@@ -22,6 +22,7 @@ import (
 
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/floatingips"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/keypairs"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/secgroups"
@@ -54,19 +55,50 @@ func (c *Client) InitCompute() error {
 	return nil
 }
 
-// CreateInstance creates new ECS
-func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPairName string) (*servers.Server, error) {
-	if subnetID != "" {
-		opts.Networks = []servers.Network{{UUID: subnetID}}
+// DiskOpts contains source, size and type of disk
+type DiskOpts struct {
+	SourceID string
+	Size     int
+	Type     string
+}
+
+func blockDeviceOpts(opts *DiskOpts) bootfromvolume.BlockDevice {
+	return bootfromvolume.BlockDevice{
+		UUID:                opts.SourceID,
+		VolumeSize:          opts.Size,
+		VolumeType:          opts.Type,
+		DeleteOnTermination: true,
+		DestinationType:     "volume",
+		SourceType:          "image",
 	}
-	createOpts := &keypairs.CreateOptsExt{
-		CreateOptsBuilder: opts,
+}
+
+// CreateInstance creates new ECS
+func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPairName string, diskOpts *DiskOpts) (*servers.Server, error) {
+
+	var createOpts servers.CreateOptsBuilder = &servers.CreateOpts{
+		Name:             opts.Name,
+		FlavorRef:        opts.FlavorRef,
+		FlavorName:       opts.FlavorName,
+		SecurityGroups:   opts.SecurityGroups,
+		AvailabilityZone: opts.AvailabilityZone,
+		Networks:         []servers.Network{{UUID: subnetID}},
+		ServiceClient:    c.ComputeV2,
+	}
+
+	createOpts = &keypairs.CreateOptsExt{
+		CreateOptsBuilder: createOpts,
 		KeyName:           keyPairName,
 	}
-	if opts.ServiceClient == nil {
-		opts.ServiceClient = c.ComputeV2
+
+	blockDevice := blockDeviceOpts(diskOpts)
+
+	createOpts = &bootfromvolume.CreateOptsExt{
+		CreateOptsBuilder: createOpts,
+		BlockDevice:       []bootfromvolume.BlockDevice{blockDevice},
 	}
-	server, err := servers.Create(c.ComputeV2, createOpts).Extract()
+
+	server, err := bootfromvolume.Create(c.ComputeV2, createOpts).Extract()
 	if err != nil {
 		return nil, fmt.Errorf("error creating OpenTelekomCloud server: %s", err)
 	}
