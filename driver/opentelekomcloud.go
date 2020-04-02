@@ -50,6 +50,8 @@ const (
 	defaultAuthURL       = "https://iam.eu-de.otc.t-systems.com/v3"
 	defaultVpcName       = "vpc-docker-machine"
 	defaultSubnetName    = "subnet-docker-machine"
+	defaultVolumeSize    = 40
+	defaultVolumeType    = "SATA"
 	k8sGroupName         = "sg-k8s"
 )
 
@@ -73,39 +75,39 @@ type managedSting struct {
 // Driver for docker-machine
 type Driver struct {
 	*drivers.BaseDriver
-	Cloud                  string       `json:"cloud,omitempty"`
-	AuthURL                string       `json:"auth_url,omitempty"`
-	CACert                 string       `json:"ca_cert,omitempty"`
-	ValidateCert           bool         `json:"validate_cert"`
-	DomainID               string       `json:"domain_id,omitempty"`
-	DomainName             string       `json:"domain_name,omitempty"`
-	Username               string       `json:"username,omitempty"`
-	Password               string       `json:"password,omitempty"`
-	ProjectName            string       `json:"project_name,omitempty"`
-	ProjectID              string       `json:"project_id,omitempty"`
-	Region                 string       `json:"-"`
-	AvailabilityZone       string       `json:"-"`
-	EndpointType           string       `json:"endpoint_type,omitempty"`
-	InstanceID             string       `json:"instance_id"`
-	FlavorName             string       `json:"-"`
-	FlavorID               string       `json:"-"`
-	ImageName              string       `json:"-"`
-	ImageID                string       `json:"-"`
-	KeyPairName            managedSting `json:"key_pair"`
-	VpcName                string       `json:"-"`
-	VpcID                  managedSting `json:"vpc_id"`
-	SubnetName             string       `json:"-"`
-	SubnetID               managedSting `json:"subnet_id"`
-	PrivateKeyFile         string       `json:"private_key"`
-	SecurityGroups         []string     `json:"-"`
-	SecurityGroupIDs       []string     `json:"-"`
-	ManagedSecurityGroup   string       `json:"-"`
-	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
-	K8sSecurityGroup       string       `json:"-"`
-	K8sSecurityGroupID     string       `json:"k8s_security_group,omitempty"`
-	FloatingIP             managedSting `json:"floating_ip"`
-	Token                  string       `json:"token,omitempty"`
-	IPVersion              int          `json:"-"`
+	Cloud                  string             `json:"cloud,omitempty"`
+	AuthURL                string             `json:"auth_url,omitempty"`
+	CACert                 string             `json:"ca_cert,omitempty"`
+	ValidateCert           bool               `json:"validate_cert"`
+	DomainID               string             `json:"domain_id,omitempty"`
+	DomainName             string             `json:"domain_name,omitempty"`
+	Username               string             `json:"username,omitempty"`
+	Password               string             `json:"password,omitempty"`
+	ProjectName            string             `json:"project_name,omitempty"`
+	ProjectID              string             `json:"project_id,omitempty"`
+	Region                 string             `json:"-"`
+	AvailabilityZone       string             `json:"-"`
+	EndpointType           string             `json:"endpoint_type,omitempty"`
+	InstanceID             string             `json:"instance_id"`
+	FlavorName             string             `json:"-"`
+	FlavorID               string             `json:"-"`
+	ImageName              string             `json:"-"`
+	KeyPairName            managedSting       `json:"key_pair"`
+	VpcName                string             `json:"-"`
+	VpcID                  managedSting       `json:"vpc_id"`
+	SubnetName             string             `json:"-"`
+	SubnetID               managedSting       `json:"subnet_id"`
+	PrivateKeyFile         string             `json:"private_key"`
+	SecurityGroups         []string           `json:"-"`
+	SecurityGroupIDs       []string           `json:"-"`
+	ManagedSecurityGroup   string             `json:"-"`
+	ManagedSecurityGroupID string             `json:"managed_security_group,omitempty"`
+	K8sSecurityGroup       string             `json:"-"`
+	K8sSecurityGroupID     string             `json:"k8s_security_group,omitempty"`
+	FloatingIP             managedSting       `json:"floating_ip"`
+	Token                  string             `json:"token,omitempty"`
+	RootVolumeOpts         *services.DiskOpts `json:"-"`
+	IPVersion              int                `json:"-"`
 	client                 *services.Client
 }
 
@@ -201,7 +203,7 @@ func (d *Driver) resolveIDs() error {
 		}
 		d.FlavorID = flavID
 	}
-	if d.ImageID == "" && d.ImageName != "" {
+	if d.RootVolumeOpts.SourceID == "" && d.ImageName != "" {
 		imageID, err := d.client.FindImage(d.ImageName)
 		if err != nil {
 			return err
@@ -209,7 +211,7 @@ func (d *Driver) resolveIDs() error {
 		if imageID == "" {
 			return fmt.Errorf(notFound, "image", d.ImageName)
 		}
-		d.ImageID = imageID
+		d.RootVolumeOpts.SourceID = imageID
 	}
 	sgIDs, err := d.client.FindSecurityGroups(d.SecurityGroups)
 	if err != nil {
@@ -315,11 +317,10 @@ func (d *Driver) createInstance() error {
 	serverOpts := &servers.CreateOpts{
 		Name:             d.MachineName,
 		FlavorRef:        d.FlavorID,
-		ImageRef:         d.ImageID,
 		SecurityGroups:   secGroups,
 		AvailabilityZone: d.AvailabilityZone,
 	}
-	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value)
+	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value, d.RootVolumeOpts)
 	if err != nil {
 		return err
 	}
@@ -514,6 +515,16 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.BoolFlag{
 			Name:  "otc-k8s-group",
 			Usage: "Create security group with k8s ports allowed",
+		},
+		mcnflag.IntFlag{
+			Name:  "otc-root-volume-size",
+			Usage: "Set volume size of root partition",
+			Value: defaultVolumeSize,
+		},
+		mcnflag.StringFlag{
+			Name:  "otc-root-volume-type",
+			Usage: "Set volume type of root partition (one of SATA, SAS, SSD)",
+			Value: defaultVolumeType,
 		},
 	}
 }
@@ -824,7 +835,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.EndpointType = flags.String("otc-endpoint-type")
 	d.FlavorID = flags.String("otc-flavor-id")
 	d.FlavorName = flags.String("otc-flavor-name")
-	d.ImageID = flags.String("otc-image-id")
 	d.ImageName = flags.String("otc-image-name")
 	d.VpcID = managedSting{Value: flags.String("otc-vpc-id")}
 	d.VpcName = flags.String("otc-vpc-name")
@@ -837,6 +847,11 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.KeyPairName = managedSting{Value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
+	d.RootVolumeOpts = &services.DiskOpts{
+		SourceID: flags.String("otc-image-id"),
+		Size:     flags.Int("otc-root-volume-size"),
+		Type:     flags.String("otc-root-volume-type"),
+	}
 
 	if sg := flags.String("otc-sec-groups"); sg != "" {
 		d.SecurityGroups = strings.Split(sg, ",")

@@ -186,14 +186,17 @@ func TestClient_CreateInstance(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = client.DeleteKeyPair(kpName) }()
 
+	imgRef, err := client.FindImage(defaultImage)
+	require.NoError(t, err)
+
 	opts := &servers.CreateOpts{
 		Name:             serverName,
-		ImageName:        defaultImage,
 		FlavorName:       defaultFlavor,
 		AvailabilityZone: defaultAZ,
 		Networks:         []servers.Network{{UUID: subnet.ID}},
 	}
-	instance, err := client.CreateInstance(opts, subnet.ID, kp.Name)
+	dOpts := &DiskOpts{SourceID: imgRef, Size: 10, Type: "SATA"}
+	instance, err := client.CreateInstance(opts, subnet.ID, kp.Name, dOpts)
 	require.NoError(t, err)
 	assert.NoError(t, client.WaitForInstanceStatus(instance.ID, InstanceStatusRunning))
 	defer func() {
