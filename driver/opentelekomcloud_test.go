@@ -271,3 +271,24 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 
 	_ = driver.client.DeleteKeyPair(kpName)
 }
+
+func TestDriver_WithoutFloatingIP(t *testing.T) {
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":       "otc",
+			"otc-subnet-name": subnetName,
+			"otc-vpc-name":    vpcName,
+			"otc-skip-ip":     true,
+		})
+	require.NoError(t, err)
+	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initNetwork())
+	defer func() {
+		assert.NoError(t, cleanupResources(driver))
+	}()
+	assert.NoError(t, driver.Create())
+	status, err := driver.client.GetInstanceStatus(driver.InstanceID)
+	assert.NoError(t, err)
+	assert.Len(t, status.Addresses, 1)
+	assert.NoError(t, driver.Remove())
+}

@@ -108,6 +108,8 @@ type Driver struct {
 	Token                  string             `json:"token,omitempty"`
 	RootVolumeOpts         *services.DiskOpts `json:"-"`
 	IPVersion              int                `json:"-"`
+	skipEIPCreation        bool
+	eipConfig              *services.ElasticIPOpts
 	client                 *services.Client
 }
 
@@ -266,6 +268,23 @@ func (d *Driver) Authenticate() error {
 	return d.client.Authenticate(opts)
 }
 
+func (d *Driver) createFloatingIP() error {
+	if d.FloatingIP.Value == "" {
+		eip, err := d.client.CreateEIP(d.eipConfig)
+		if err != nil {
+			return err
+		}
+		if err := d.client.WaitForEIPActive(eip.ID); err != nil {
+			return err
+		}
+		d.FloatingIP = managedSting{Value: eip.PublicAddress, DriverManaged: true}
+	}
+	if err := d.client.BindFloatingIP(d.FloatingIP.Value, d.InstanceID); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Create creates new ECS used for docker-machine
 func (d *Driver) Create() error {
 	if err := d.Authenticate(); err != nil {
@@ -290,15 +309,10 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
-	if d.FloatingIP.Value == "" {
-		addr, err := d.client.CreateFloatingIP()
-		if err != nil {
+	if !d.skipEIPCreation {
+		if err := d.createFloatingIP(); err != nil {
 			return err
 		}
-		d.FloatingIP = managedSting{Value: addr, DriverManaged: true}
-	}
-	if err := d.client.BindFloatingIP(d.FloatingIP.Value, d.InstanceID); err != nil {
-		return err
 	}
 	return nil
 }
@@ -483,6 +497,40 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			EnvVar: "OS_FLOATINGIP",
 			Usage:  "OpenTelekomCloud floating IP to use",
 			Value:  "",
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-floating-ip-type",
+			EnvVar: "BANDWIDTH_TYPE",
+			Usage:  "OpenTelekomCloud bandwidth type",
+			Value:  "5_bgp",
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-elastic-ip-type",
+			EnvVar: "BANDWIDTH_TYPE",
+			Usage:  "OpenTelekomCloud bandwidth type. DEPRECATED! Use -otc-floating-ip-type instead",
+			Value:  "",
+		},
+		mcnflag.IntFlag{
+			Name:   "otc-bandwidth-size",
+			EnvVar: "BANDWIDTH_SIZE",
+			Usage:  "OpenTelekomCloud bandwidth size",
+			Value:  100,
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-bandwidth-type",
+			EnvVar: "BANDWIDTH_TYPE",
+			Usage:  "OpenTelekomCloud bandwidth share type",
+			Value:  "PER",
+		},
+		mcnflag.IntFlag{
+			Name:   "otc-elastic-ip",
+			EnvVar: "ELASTIC_IP",
+			Usage:  "If set to 0, elastic IP won't be created. DEPRECATED: use -otc-skip-ip instead",
+			Value:  1,
+		},
+		mcnflag.BoolFlag{
+			Name:  "otc-skip-ip",
+			Usage: "If set, elastic IP won't be created",
 		},
 		mcnflag.IntFlag{
 			Name:   "otc-ip-version",
@@ -797,20 +845,6 @@ func (d *Driver) createSSHKey() error {
 	if err != nil {
 		return err
 	}
-	publicKeyReceived, err := d.client.FindKeyPair(d.KeyPairName.Value)
-	if err != nil {
-		return err
-	}
-	if publicKeyReceived != "" {
-		if publicKeyReceived != string(publicKey) {
-			return fmt.Errorf("found existing key pair `%s` with not matching public key", d.KeyPairName.Value)
-		}
-
-		log.Debug("Using existing Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
-		d.KeyPairName = managedSting{d.KeyPairName.Value, false}
-		return nil
-	}
-
 	d.KeyPairName = managedSting{d.KeyPairName.Value, true}
 	if err := d.initCompute(); err != nil {
 		return err
@@ -855,6 +889,16 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		Size:     flags.Int("otc-root-volume-size"),
 		Type:     flags.String("otc-root-volume-type"),
 	}
+	ipType := flags.String("otc-elastic-ip-type")
+	if ipType == "" {
+		ipType = flags.String("otc-floating-ip-type")
+	}
+	d.eipConfig = &services.ElasticIPOpts{
+		IPType:        ipType,
+		BandwidthSize: flags.Int("otc-bandwidth-size"),
+		BandwidthType: flags.String("otc-bandwidth-type"),
+	}
+	d.skipEIPCreation = flags.Int("otc-elastic-ip") == 0 || flags.Bool("otc-skip-ip")
 
 	if sg := flags.String("otc-sec-groups"); sg != "" {
 		d.SecurityGroups = strings.Split(sg, ",")

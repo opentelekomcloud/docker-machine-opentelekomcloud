@@ -379,22 +379,6 @@ func (c *Client) WaitForGroupDeleted(securityGroupID string) error {
 	return err
 }
 
-const floatingIPPoolID = "admin_external_net"
-
-// CreateFloatingIP creates new floating IP in `admin_external_net` pool
-func (c *Client) CreateFloatingIP() (string, error) {
-	result, err := floatingips.Create(c.ComputeV2,
-		floatingips.CreateOpts{
-			Pool: floatingIPPoolID,
-		},
-	).Extract()
-
-	if err != nil {
-		return "", err
-	}
-	return result.IP, nil
-}
-
 // BindFloatingIP binds floating IP to instance
 func (c *Client) BindFloatingIP(floatingIP string, instanceID string) error {
 	opts := floatingips.AssociateOpts{FloatingIP: floatingIP}
