@@ -20,6 +20,11 @@ const (
 var (
 	kpName     = RandomString(12, "kp-")
 	serverName = RandomString(16, "mahine-")
+	eipOptions = &ElasticIPOpts{
+		IPType:        "5_bgp",
+		BandwidthSize: 2,
+		BandwidthType: "PER",
+	}
 )
 
 func deleteSubnet(t *testing.T, vpcID string, subnetID string) {
@@ -130,9 +135,11 @@ func TestClient_CreateKeyPair(t *testing.T) {
 
 func TestClient_CreateFloatingIP(t *testing.T) {
 	client := computeClient(t)
-	ip, err := client.CreateFloatingIP()
+	require.NoError(t, client.InitNetwork())
+	eip, err := client.CreateEIP(eipOptions)
 	require.NoError(t, err)
-	assert.NotEmpty(t, ip)
+	assert.NotEmpty(t, eip.PublicAddress)
+	ip := eip.PublicAddress
 
 	addrID, err := client.FindFloatingIP(ip)
 	assert.NoError(t, err)
@@ -174,8 +181,9 @@ func TestClient_CreateInstance(t *testing.T) {
 	require.NoError(t, err)
 	defer deleteSubnet(t, vpc.ID, subnet.ID)
 
-	ip, err := client.CreateFloatingIP()
+	eip, err := client.CreateEIP(eipOptions)
 	require.NoError(t, err)
+	ip := eip.PublicAddress
 	defer func() { _ = client.DeleteFloatingIP(ip) }()
 
 	sg, err := client.CreateSecurityGroup(sgName, PortRange{From: 22})

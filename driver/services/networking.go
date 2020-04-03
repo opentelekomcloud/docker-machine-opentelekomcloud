@@ -22,6 +22,7 @@ import (
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack"
+	"github.com/huaweicloud/golangsdk/openstack/networking/v1/eips"
 	"github.com/huaweicloud/golangsdk/openstack/networking/v1/subnets"
 	"github.com/huaweicloud/golangsdk/openstack/networking/v1/vpcs"
 )
@@ -162,4 +163,49 @@ func (c *Client) WaitForSubnetStatus(subnetID string, status string) error {
 // DeleteSubnet removes subnet from VPC
 func (c *Client) DeleteSubnet(vpcID string, subnetID string) error {
 	return subnets.Delete(c.VPC, vpcID, subnetID).Err
+}
+
+type ElasticIPOpts struct {
+	IPType        string
+	BandwidthSize int
+	BandwidthType string
+}
+
+func (c *Client) GetEIPStatus(eipID string) (string, error) {
+	eip, err := eips.Get(c.VPC, eipID).Extract()
+	if err != nil {
+		return "", err
+	}
+	return eip.Status, err
+}
+
+func (c *Client) CreateEIP(opts *ElasticIPOpts) (*eips.PublicIp, error) {
+	applyOpts := &eips.ApplyOpts{
+		IP: eips.PublicIpOpts{
+			Type: opts.IPType,
+		},
+		Bandwidth: eips.BandwidthOpts{
+			Name:      "docker_machine_bandwidth",
+			Size:      opts.BandwidthSize,
+			ShareType: opts.BandwidthType,
+		},
+	}
+	eip, err := eips.Apply(c.VPC, applyOpts).Extract()
+	if err != nil {
+		return nil, err
+	}
+	return &eip, nil
+}
+
+func (c *Client) WaitForEIPActive(eipID string) error {
+	return golangsdk.WaitFor(30, func() (bool, error) {
+		status, err := c.GetEIPStatus(eipID)
+		if err != nil {
+			return true, err
+		}
+		if status == "ACTIVE" || status == "DOWN" {
+			return true, nil
+		}
+		return false, nil
+	})
 }
