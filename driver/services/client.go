@@ -17,11 +17,7 @@
 package services
 
 import (
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"time"
 
@@ -118,29 +114,5 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 	}
 	c.Provider = authClient
 	c.Provider.UserAgent.Prepend(userAgent)
-	return nil
-}
-
-// SetTLSConfig change default HTTPClient.Transport with TLS CA configuration using CACert from config
-func (c *Client) SetTLSConfig(caCertPath string, validateCert bool) error {
-	config := &tls.Config{}
-	if caCertPath != "" {
-		caCert, err := ioutil.ReadFile(caCertPath)
-
-		if err != nil {
-			return fmt.Errorf("error reading CA Cert: %s", err)
-		}
-
-		caCertPool := x509.NewCertPool()
-		ok := caCertPool.AppendCertsFromPEM(caCert)
-		if !ok {
-			return fmt.Errorf("can't use CA cert: %s", caCertPath)
-		}
-		config.RootCAs = caCertPool
-	}
-
-	config.InsecureSkipVerify = !validateCert
-
-	c.Provider.HTTPClient.Transport = &http.Transport{TLSClientConfig: config}
 	return nil
 }
