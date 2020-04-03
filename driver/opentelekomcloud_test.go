@@ -1,11 +1,14 @@
 package opentelekomcloud
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
+	"github.com/docker/machine/libmachine/ssh"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -239,4 +242,32 @@ func TestDriver_CreateWithK8sGroup(t *testing.T) {
 
 	assert.Contains(t, sgs, driver.K8sSecurityGroup)
 	assert.NoError(t, driver.Remove())
+}
+
+func TestDriver_ExistingSSHKey(t *testing.T) {
+	kpName := "dmd-kp"
+	keyPath := "oijugrehuilg_rsa"
+	require.NoError(t, ssh.GenerateSSHKey(keyPath))
+
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":            "otc",
+			"otc-subnet-name":      subnetName,
+			"otc-vpc-name":         vpcName,
+			"otc-keypair-name":     kpName,
+			"otc-private-key-file": keyPath,
+		})
+	require.NoError(t, err)
+
+	require.NoError(t, driver.client.InitCompute())
+	fData, err := ioutil.ReadFile(fmt.Sprintf("%s.pub", keyPath))
+	require.NoError(t, err)
+
+	_, err = driver.client.CreateKeyPair(kpName, string(fData))
+	require.NoError(t, err)
+
+	assert.NoError(t, driver.Create())
+	assert.NoError(t, driver.Remove())
+
+	_ = driver.client.DeleteKeyPair(kpName)
 }
