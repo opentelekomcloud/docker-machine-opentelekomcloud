@@ -217,3 +217,26 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	assert.NoError(t, driver.Remove())
 
 }
+
+func TestDriver_CreateWithK8sGroup(t *testing.T) {
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":       "otc",
+			"otc-subnet-name": subnetName,
+			"otc-vpc-name":    vpcName,
+			"otc-k8s-group":   true,
+		})
+	require.NoError(t, err)
+	assert.NoError(t, driver.Create())
+	instance, err := driver.client.GetInstanceStatus(driver.InstanceID)
+	assert.NoError(t, err)
+	assert.Len(t, instance.SecurityGroups, 2)
+	var sgs []string
+	for _, sg := range instance.SecurityGroups {
+		sgName := sg["name"].(string)
+		sgs = append(sgs, sgName)
+	}
+
+	assert.Contains(t, sgs, driver.K8sSecurityGroup)
+	assert.NoError(t, driver.Remove())
+}

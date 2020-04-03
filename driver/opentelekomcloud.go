@@ -314,6 +314,9 @@ func (d *Driver) createInstance() error {
 	if d.ManagedSecurityGroupID != "" {
 		secGroups = append(secGroups, d.ManagedSecurityGroupID)
 	}
+	if d.K8sSecurityGroupID != "" {
+		secGroups = append(secGroups, d.K8sSecurityGroupID)
+	}
 	serverOpts := &servers.CreateOpts{
 		Name:             d.MachineName,
 		FlavorRef:        d.FlavorID,
