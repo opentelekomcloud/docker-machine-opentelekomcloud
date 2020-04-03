@@ -500,13 +500,13 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-floating-ip-type",
-			EnvVar: "BANDWIDTH_TYPE",
+			EnvVar: "ELASTICIP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type",
 			Value:  "5_bgp",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-elastic-ip-type",
-			EnvVar: "BANDWIDTH_TYPE",
+			EnvVar: "ELASTICIP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type. DEPRECATED! Use -otc-floating-ip-type instead",
 			Value:  "",
 		},
