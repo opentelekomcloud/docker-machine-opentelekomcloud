@@ -290,5 +290,6 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 	status, err := driver.client.GetInstanceStatus(driver.InstanceID)
 	assert.NoError(t, err)
 	assert.Len(t, status.Addresses, 1)
+	assert.NotEmpty(t, driver.FloatingIP)
 	assert.NoError(t, driver.Remove())
 }

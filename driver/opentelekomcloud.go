@@ -285,6 +285,22 @@ func (d *Driver) createFloatingIP() error {
 	return nil
 }
 
+func (d *Driver) useLocalIP() error {
+	instance, err := d.client.GetInstanceStatus(d.InstanceID)
+	if err != nil {
+		return err
+	}
+	for _, addrPool := range instance.Addresses {
+		addrDetails := addrPool.([]interface{})[0].(map[string]interface{})
+		d.FloatingIP = managedSting{
+			Value:         addrDetails["addr"].(string),
+			DriverManaged: false,
+		}
+		return nil
+	}
+	return nil
+}
+
 // Create creates new ECS used for docker-machine
 func (d *Driver) Create() error {
 	if err := d.Authenticate(); err != nil {
@@ -309,7 +325,11 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
-	if !d.skipEIPCreation {
+	if d.skipEIPCreation {
+		if err := d.useLocalIP(); err != nil {
+			return err
+		}
+	} else {
 		if err := d.createFloatingIP(); err != nil {
 			return err
 		}
