@@ -43,7 +43,6 @@ const (
 	defaultAZ            = "eu-de-03"
 	defaultFlavor        = "s2.large.2"
 	defaultImage         = "Standard_Debian_10_latest"
-	defaultCloudName     = "cloud"
 	defaultSSHUser       = "linux"
 	defaultSSHPort       = 22
 	defaultRegion        = "eu-de"
@@ -85,7 +84,8 @@ type Driver struct {
 	Password               string             `json:"password,omitempty"`
 	ProjectName            string             `json:"project_name,omitempty"`
 	ProjectID              string             `json:"project_id,omitempty"`
-	Region                 string             `json:"-"`
+	Region                 string             `json:"region,omitempty"`
+	AccessKey              services.AccessKey `json:"ak_sk,omitempty"`
 	AvailabilityZone       string             `json:"-"`
 	EndpointType           string             `json:"endpoint_type,omitempty"`
 	InstanceID             string             `json:"instance_id"`
@@ -265,7 +265,13 @@ func (d *Driver) Authenticate() error {
 			Token:             d.Token,
 		},
 	}
-	return d.client.Authenticate(opts)
+	if d.Cloud != "" || (d.Username != "" && d.Password != "") || d.Token != "" {
+		return d.client.AuthenticateWithToken(opts)
+	}
+	if d.AccessKey.AccessKey != "" && d.AccessKey.SecretKey != "" {
+		return d.client.AuthenticateWithAKSK(opts, d.AccessKey)
+	}
+	return fmt.Errorf("can't define way to authenticate")
 }
 
 func (d *Driver) createFloatingIP() error {
@@ -433,6 +439,18 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			EnvVar: "OS_REGION_NAME",
 			Usage:  "OpenTelekomCloud region name",
 			Value:  defaultRegion,
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-access-key-id",
+			Usage:  "OpenTelekomCloud access key ID for AK/SK auth",
+			EnvVar: "ACCESS_KEY_ID",
+			Value:  "",
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-access-key-key",
+			Usage:  "OpenTelekomCloud secret access key for AK/SK auth",
+			EnvVar: "ACCESS_KEY_SECRET",
+			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-availability-zone",
@@ -904,6 +922,11 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.KeyPairName = managedSting{Value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
+	d.AccessKey = services.AccessKey{
+		AccessKey: flags.String("otc-access-key-id"),
+		SecretKey: flags.String("otc-access-key-key"),
+	}
+
 	d.RootVolumeOpts = &services.DiskOpts{
 		SourceID: flags.String("otc-image-id"),
 		Size:     flags.Int("otc-root-volume-size"),
@@ -942,8 +965,11 @@ func (d *Driver) checkConfig() error {
 	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}
-	if d.Cloud == "" && d.Username == "" {
-		d.Cloud = defaultCloudName
+	if d.Cloud == "" &&
+		(d.Username == "" || d.Password == "") &&
+		d.Token == "" &&
+		(d.AccessKey.AccessKey == "" || d.AccessKey.SecretKey == "") {
+		return fmt.Errorf("at least one authorization method must be provided")
 	}
 	return nil
 }

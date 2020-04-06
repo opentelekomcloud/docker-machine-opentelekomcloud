@@ -3,7 +3,7 @@ export PATH:=/usr/local/go/bin:$(PATH)
 exec_path := /usr/local/bin/
 exec_name := docker-machine-driver-otc
 
-VERSION := 0.2.2b2
+VERSION := 0.2.2b3
 
 
 default: test build
@@ -28,7 +28,7 @@ vet:
 
 acceptance:
 	@echo "Starting acceptance tests..."
-	@go test ./... -race -covermode=atomic -coverprofile=coverage.txt
+	@go test ./... -race -covermode=atomic -coverprofile=coverage.txt -timeout 20m -v
 
 build: build-linux
 

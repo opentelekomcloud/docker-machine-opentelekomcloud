@@ -91,6 +91,15 @@ func TestDriver_AuthCreds(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestDriver_AuthAKSK(t *testing.T) {
+	_, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-access-key-id":  os.Getenv("OTC_ACCESS_KEY_ID"),
+			"otc-access-key-key": os.Getenv("OTC_ACCESS_KEY_SECRET"),
+		})
+	assert.NoError(t, err)
+}
+
 func TestDriver_Create(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
@@ -291,5 +300,23 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, status.Addresses, 1)
 	assert.NotEmpty(t, driver.FloatingIP)
+	assert.NoError(t, driver.Remove())
+}
+
+func TestDriver_CreateWithAKSK(t *testing.T) {
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-access-key-id":  os.Getenv("OTC_ACCESS_KEY_ID"),
+			"otc-access-key-key": os.Getenv("OTC_ACCESS_KEY_SECRET"),
+			"otc-domain-name":    os.Getenv("OTC_DOMAIN_NAME"),
+			"otc-project-name":   os.Getenv("OTC_PROJECT_NAME"),
+		})
+	require.NoError(t, err)
+	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initNetwork())
+	defer func() {
+		assert.NoError(t, cleanupResources(driver))
+	}()
+	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
 }
