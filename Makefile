@@ -28,7 +28,7 @@ vet:
 
 acceptance:
 	@echo "Starting acceptance tests..."
-	@go test ./... -race -covermode=atomic -coverprofile=coverage.txt
+	@go test ./... -race -covermode=atomic -coverprofile=coverage.txt -timeout 20m -v
 
 build: build-linux
 
