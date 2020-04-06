@@ -23,7 +23,7 @@ func authClient(t *testing.T) *Client {
 	opts := &clientconfig.ClientOpts{
 		Cloud: "otc",
 	}
-	err := client.Authenticate(opts)
+	err := client.AuthenticateWithToken(opts)
 	require.NoError(t, err, authFailedMessage)
 	return client
 }

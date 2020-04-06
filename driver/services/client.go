@@ -56,8 +56,10 @@ func getEndpointType(endpointType string) huaweisdk.Availability {
 	return defaultEndpointType
 }
 
-// Authenticate authenticate client in the cloud
-func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
+var userAgent = fmt.Sprintf("docker-machine/v%d", version.APIVersion)
+
+// AuthenticateWithToken authenticate client in the cloud with token (either directly or via username/password)
+func (c *Client) AuthenticateWithToken(opts *clientconfig.ClientOpts) error {
 	if c.Provider != nil {
 		return nil
 	}
@@ -95,8 +97,6 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 		c.region = opts.RegionName
 	}
 
-	userAgent := fmt.Sprintf("docker-machine/v%d", version.APIVersion)
-
 	hwOpts := huaweisdk.AuthOptions{
 		IdentityEndpoint: ao.IdentityEndpoint,
 		Username:         ao.Username,
@@ -113,6 +113,47 @@ func (c *Client) Authenticate(opts *clientconfig.ClientOpts) error {
 		return err
 	}
 	c.Provider = authClient
+	c.Provider.UserAgent.Prepend(userAgent)
+	return nil
+}
+
+type AccessKey struct {
+	AccessKey string `json:"key_id,omitempty"`
+	SecretKey string `json:"secret_key,omitempty"`
+}
+
+// AuthenticateWithAKSK authenticate client in the cloud with AK + SK
+func (c *Client) AuthenticateWithAKSK(opts *clientconfig.ClientOpts, accessKey AccessKey) error {
+	if c.Provider != nil {
+		return nil
+	}
+	client, err := openstack.NewClient(opts.AuthInfo.AuthURL)
+	if err != nil {
+		return err
+	}
+
+	if opts.RegionName == "" {
+		opts.RegionName = defaultRegion
+	}
+	c.region = opts.RegionName
+
+	authOpts := huaweisdk.AKSKAuthOptions{
+		IdentityEndpoint: opts.AuthInfo.AuthURL,
+		Region:           opts.RegionName,
+		ProjectName:      opts.AuthInfo.ProjectName,
+		ProjectId:        opts.AuthInfo.ProjectID,
+		Domain:           opts.AuthInfo.DomainName,
+		DomainID:         opts.AuthInfo.DomainID,
+		AccessKey:        accessKey.AccessKey,
+		SecretKey:        accessKey.SecretKey,
+	}
+
+	if err := openstack.Authenticate(client, authOpts); err != nil {
+		return err
+	}
+
+	c.endpointType = getEndpointType(opts.EndpointType)
+	c.Provider = client
 	c.Provider.UserAgent.Prepend(userAgent)
 	return nil
 }
