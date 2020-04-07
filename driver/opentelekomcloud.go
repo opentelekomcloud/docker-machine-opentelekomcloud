@@ -459,6 +459,11 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultAZ,
 		},
 		mcnflag.StringFlag{
+			Name:  "otc-available-zone",
+			Usage: "OpenTelekomCloud availability zone. DEPRECATED: use -otc-availability-zone instead",
+			Value: "",
+		},
+		mcnflag.StringFlag{
 			Name:   "otc-flavor-id",
 			EnvVar: "OS_FLAVOR_ID",
 			Usage:  "OpenTelekomCloud flavor id to use for the instance",
@@ -906,7 +911,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.ProjectName = flags.String("otc-project-name")
 	d.ProjectID = flags.String("otc-project-id")
 	d.Region = flags.String("otc-region")
-	d.AvailabilityZone = flags.String("otc-availability-zone")
 	d.EndpointType = flags.String("otc-endpoint-type")
 	d.FlavorID = flags.String("otc-flavor-id")
 	d.FlavorName = flags.String("otc-flavor-name")
@@ -936,12 +940,19 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	if ipType == "" {
 		ipType = flags.String("otc-floating-ip-type")
 	}
+
 	d.eipConfig = &services.ElasticIPOpts{
 		IPType:        ipType,
 		BandwidthSize: flags.Int("otc-bandwidth-size"),
 		BandwidthType: flags.String("otc-bandwidth-type"),
 	}
 	d.skipEIPCreation = flags.Int("otc-elastic-ip") == 0 || flags.Bool("otc-skip-ip")
+
+	az := flags.String("otc-available-zone")
+	if az == "" {
+		az = flags.String("otc-availability-zone")
+	}
+	d.AvailabilityZone = az
 
 	if sg := flags.String("otc-sec-groups"); sg != "" {
 		d.SecurityGroups = strings.Split(sg, ",")
