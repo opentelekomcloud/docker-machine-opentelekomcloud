@@ -320,3 +320,40 @@ func TestDriver_CreateWithAKSK(t *testing.T) {
 	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
 }
+
+func TestDriver_SetConfigFromFlagsDeprecated(t *testing.T) {
+	az := services.RandomString(5, "")
+	eipType := services.RandomString(5, "")
+
+	driverDeprecated := NewDriver(instanceName, "path")
+	flagsD := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"otc-cloud":           "otc",
+			"otc-available-zone":  az,
+			"otc-elastic-ip-type": eipType,
+			"otc-elastic-ip":      0,
+		},
+		CreateFlags: driverDeprecated.GetCreateFlags(),
+	}
+	assert.NoError(t, driverDeprecated.SetConfigFromFlags(flagsD))
+
+	driverNew := NewDriver(instanceName, "path")
+	flagsN := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"otc-cloud":             "otc",
+			"otc-availability-zone": az,
+			"otc-floating-ip-type":  eipType,
+			"otc-skip-ip":           true,
+		},
+		CreateFlags: driverNew.GetCreateFlags(),
+	}
+	assert.NoError(t, driverNew.SetConfigFromFlags(flagsN))
+
+	assert.Equal(t, driverNew.AvailabilityZone, driverDeprecated.AvailabilityZone)
+	assert.Equal(t, az, driverNew.AvailabilityZone)
+	assert.Equal(t, driverDeprecated.eipConfig.IPType, driverNew.eipConfig.IPType)
+	assert.Equal(t, eipType, driverNew.eipConfig.IPType)
+	assert.Equal(t, driverNew.skipEIPCreation, driverDeprecated.skipEIPCreation)
+	assert.Equal(t, true, driverNew.skipEIPCreation)
+
+}
