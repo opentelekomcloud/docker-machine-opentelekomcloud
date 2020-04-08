@@ -25,7 +25,9 @@ import (
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/bootfromvolume"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/floatingips"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/keypairs"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/schedulerhints"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/secgroups"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/startstop"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/flavors"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
@@ -73,8 +75,16 @@ func blockDeviceOpts(opts *DiskOpts) bootfromvolume.BlockDevice {
 	}
 }
 
+type ExtendedServerOpts struct {
+	*servers.CreateOpts
+	SubnetID      string
+	KeyPairName   string
+	DiskOpts      *DiskOpts
+	ServerGroupID string
+}
+
 // CreateInstance creates new ECS
-func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPairName string, diskOpts *DiskOpts) (*servers.Server, error) {
+func (c *Client) CreateInstance(opts *ExtendedServerOpts) (*servers.Server, error) {
 
 	var createOpts servers.CreateOptsBuilder = &servers.CreateOpts{
 		Name:             opts.Name,
@@ -83,16 +93,25 @@ func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPa
 		SecurityGroups:   opts.SecurityGroups,
 		UserData:         opts.UserData,
 		AvailabilityZone: opts.AvailabilityZone,
-		Networks:         []servers.Network{{UUID: subnetID}},
+		Networks:         []servers.Network{{UUID: opts.SubnetID}},
 		ServiceClient:    c.ComputeV2,
+	}
+
+	if opts.ServerGroupID != "" {
+		createOpts = &schedulerhints.CreateOptsExt{
+			CreateOptsBuilder: createOpts,
+			SchedulerHints: schedulerhints.SchedulerHints{
+				Group: opts.ServerGroupID,
+			},
+		}
 	}
 
 	createOpts = &keypairs.CreateOptsExt{
 		CreateOptsBuilder: createOpts,
-		KeyName:           keyPairName,
+		KeyName:           opts.KeyPairName,
 	}
 
-	blockDevice := blockDeviceOpts(diskOpts)
+	blockDevice := blockDeviceOpts(opts.DiskOpts)
 
 	createOpts = &bootfromvolume.CreateOptsExt{
 		CreateOptsBuilder: createOpts,
@@ -365,7 +384,7 @@ func (c *Client) DeleteSecurityGroup(securityGroupID string) error {
 
 // WaitForGroupDeleted polls sec group until it returns 404
 func (c *Client) WaitForGroupDeleted(securityGroupID string) error {
-	err := golangsdk.WaitFor(60, func() (b bool, e error) {
+	return golangsdk.WaitFor(60, func() (b bool, e error) {
 		err := secgroups.Get(c.ComputeV2, securityGroupID).Err
 		if err == nil {
 			return false, nil
@@ -377,7 +396,6 @@ func (c *Client) WaitForGroupDeleted(securityGroupID string) error {
 			return true, err
 		}
 	})
-	return err
 }
 
 // BindFloatingIP binds floating IP to instance
@@ -393,10 +411,10 @@ func (c *Client) UnbindFloatingIP(floatingIP string, instanceID string) error {
 }
 
 // FindFloatingIP finds given floating IP and returns ID
-func (c *Client) FindFloatingIP(floatingIP string) (string, error) {
+func (c *Client) FindFloatingIP(floatingIP string) (addressID string, err error) {
 	pager := floatingips.List(c.ComputeV2)
-	addressID := ""
-	err := pager.EachPage(func(page pagination.Page) (b bool, err error) {
+	addressID = ""
+	err = pager.EachPage(func(page pagination.Page) (b bool, err error) {
 		addressList, err := floatingips.ExtractFloatingIPs(page)
 		if err != nil {
 			return false, err
@@ -409,7 +427,7 @@ func (c *Client) FindFloatingIP(floatingIP string) (string, error) {
 		}
 		return true, nil
 	})
-	return addressID, err
+	return
 }
 
 // DeleteFloatingIP releases floating IP
@@ -419,4 +437,23 @@ func (c *Client) DeleteFloatingIP(floatingIP string) error {
 		return err
 	}
 	return floatingips.Delete(c.ComputeV2, address).Err
+}
+
+func (c *Client) FindServerGroup(groupName string) (result string, err error) {
+	pager := servergroups.List(c.ComputeV2)
+	result = ""
+	err = pager.EachPage(func(page pagination.Page) (bool, error) {
+		groups, err := servergroups.ExtractServerGroups(page)
+		if err != nil {
+			return false, err
+		}
+		for _, group := range groups {
+			if group.Name == groupName {
+				result = group.ID
+				return false, nil
+			}
+		}
+		return true, nil
+	})
+	return
 }

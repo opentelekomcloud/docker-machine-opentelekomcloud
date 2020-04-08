@@ -100,6 +100,8 @@ type Driver struct {
 	PrivateKeyFile         string             `json:"private_key"`
 	SecurityGroups         []string           `json:"-"`
 	SecurityGroupIDs       []string           `json:"-"`
+	ServerGroup            string             `json:"-"`
+	ServerGroupID          string             `json:"-"`
 	ManagedSecurityGroup   string             `json:"-"`
 	ManagedSecurityGroupID string             `json:"managed_security_group,omitempty"`
 	K8sSecurityGroup       string             `json:"-"`
@@ -221,6 +223,15 @@ func (d *Driver) resolveIDs() error {
 		return err
 	}
 	d.SecurityGroupIDs = sgIDs
+
+	if d.ServerGroupID == "" && d.ServerGroup != "" {
+		serverGroupID, err := d.client.FindServerGroup(d.ServerGroup)
+		if err != nil {
+			return err
+		}
+		d.ServerGroupID = serverGroupID
+	}
+
 	return nil
 }
 
@@ -359,11 +370,17 @@ func (d *Driver) createInstance() error {
 		secGroups = append(secGroups, d.K8sSecurityGroupID)
 	}
 
-	serverOpts := &servers.CreateOpts{
-		Name:             d.MachineName,
-		FlavorRef:        d.FlavorID,
-		SecurityGroups:   secGroups,
-		AvailabilityZone: d.AvailabilityZone,
+	serverOpts := &services.ExtendedServerOpts{
+		CreateOpts: &servers.CreateOpts{
+			Name:             d.MachineName,
+			FlavorRef:        d.FlavorID,
+			SecurityGroups:   secGroups,
+			AvailabilityZone: d.AvailabilityZone,
+		},
+		SubnetID:      d.SubnetID.Value,
+		KeyPairName:   d.KeyPairName.Value,
+		DiskOpts:      d.RootVolumeOpts,
+		ServerGroupID: d.ServerGroupID,
 	}
 
 	if d.UserDataFile != "" {
@@ -374,7 +391,7 @@ func (d *Driver) createInstance() error {
 		serverOpts.UserData = userData
 	}
 
-	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value, d.RootVolumeOpts)
+	instance, err := d.client.CreateInstance(serverOpts)
 	if err != nil {
 		return err
 	}
@@ -621,6 +638,14 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.BoolFlag{
 			Name:  "otc-k8s-group",
 			Usage: "Create security group with k8s ports allowed",
+		},
+		mcnflag.StringFlag{
+			Name:  "otc-server-group",
+			Usage: "Define server group where server will be created",
+		},
+		mcnflag.StringFlag{
+			Name:  "otc-server-group-id",
+			Usage: "Define server group where server will be created by ID",
 		},
 		mcnflag.IntFlag{
 			Name:  "otc-root-volume-size",
@@ -939,6 +964,8 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
 	d.UserDataFile = flags.String("otc-user-data-file")
+	d.ServerGroup = flags.String("otc-server-group")
+	d.ServerGroupID = flags.String("otc-server-group-id")
 	d.AccessKey = services.AccessKey{
 		AccessKey: flags.String("otc-access-key-id"),
 		SecretKey: flags.String("otc-access-key-key"),

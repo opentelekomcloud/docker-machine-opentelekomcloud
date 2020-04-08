@@ -10,6 +10,7 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/huaweicloud/golangsdk"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -379,4 +380,31 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 	}()
 	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
+}
+
+func TestDriver_ResolveServerGroup(t *testing.T) {
+	driver, err := defaultDriver()
+	require.NoError(t, err)
+	require.NoError(t, driver.initCompute())
+	group, err := servergroups.Create(driver.client.ComputeV2, servergroups.CreateOpts{
+		Name:     "test-group",
+		Policies: []string{"anti-affinity"},
+	}).Extract()
+	require.NoError(t, err)
+	defer servergroups.Delete(driver.client.ComputeV2, group.ID)
+
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"otc-cloud":        "otc",
+			"otc-subnet-id":    "1234",
+			"otc-vpc-id":       "asdf",
+			"otc-server-group": group.Name,
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+
+	assert.NoError(t, driver.SetConfigFromFlags(flags))
+	assert.NoError(t, driver.resolveIDs())
+	assert.Equal(t, group.ID, driver.ServerGroupID)
+
 }
