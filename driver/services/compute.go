@@ -81,6 +81,7 @@ func (c *Client) CreateInstance(opts *servers.CreateOpts, subnetID string, keyPa
 		FlavorRef:        opts.FlavorRef,
 		FlavorName:       opts.FlavorName,
 		SecurityGroups:   opts.SecurityGroups,
+		UserData:         opts.UserData,
 		AvailabilityZone: opts.AvailabilityZone,
 		Networks:         []servers.Network{{UUID: subnetID}},
 		ServiceClient:    c.ComputeV2,

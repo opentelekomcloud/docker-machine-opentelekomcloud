@@ -355,5 +355,28 @@ func TestDriver_SetConfigFromFlagsDeprecated(t *testing.T) {
 	assert.Equal(t, eipType, driverNew.eipConfig.IPType)
 	assert.Equal(t, driverNew.skipEIPCreation, driverDeprecated.skipEIPCreation)
 	assert.Equal(t, true, driverNew.skipEIPCreation)
+}
 
+// This test won't check anything really, it exists only for debug purposes
+func TestDriver_CreateWithUserData(t *testing.T) {
+	fileName := "tmp.sh"
+	userData := []byte("#!/usr/bin/bash\necho touch > /tmp/my")
+	require.NoError(t, ioutil.WriteFile(fileName, userData, os.ModePerm))
+	defer func() {
+		_ = os.Remove(fileName)
+	}()
+
+	driver, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":          "otc",
+			"otc-user-data-file": fileName,
+		})
+	require.NoError(t, err)
+	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initNetwork())
+	defer func() {
+		assert.NoError(t, cleanupResources(driver))
+	}()
+	assert.NoError(t, driver.Create())
+	assert.NoError(t, driver.Remove())
 }

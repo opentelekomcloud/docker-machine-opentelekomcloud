@@ -107,6 +107,7 @@ type Driver struct {
 	FloatingIP             managedSting       `json:"floating_ip"`
 	Token                  string             `json:"token,omitempty"`
 	RootVolumeOpts         *services.DiskOpts `json:"-"`
+	UserDataFile           string             `json:"-"`
 	IPVersion              int                `json:"-"`
 	skipEIPCreation        bool
 	eipConfig              *services.ElasticIPOpts
@@ -357,12 +358,22 @@ func (d *Driver) createInstance() error {
 	if d.K8sSecurityGroupID != "" {
 		secGroups = append(secGroups, d.K8sSecurityGroupID)
 	}
+
 	serverOpts := &servers.CreateOpts{
 		Name:             d.MachineName,
 		FlavorRef:        d.FlavorID,
 		SecurityGroups:   secGroups,
 		AvailabilityZone: d.AvailabilityZone,
 	}
+
+	if d.UserDataFile != "" {
+		userData, err := ioutil.ReadFile(d.UserDataFile)
+		if err != nil {
+			return err
+		}
+		serverOpts.UserData = userData
+	}
+
 	instance, err := d.client.CreateInstance(serverOpts, d.SubnetID.Value, d.KeyPairName.Value, d.RootVolumeOpts)
 	if err != nil {
 		return err
@@ -522,7 +533,8 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.StringFlag{
 			Name:   "otc-user-data-file",
 			EnvVar: "OS_USER_DATA_FILE",
-			Usage:  "File containing an otc userdata script",
+			Usage:  "File containing an userdata script",
+			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-token",
@@ -926,6 +938,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.KeyPairName = managedSting{Value: flags.String("otc-keypair-name")}
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
+	d.UserDataFile = flags.String("otc-user-data-file")
 	d.AccessKey = services.AccessKey{
 		AccessKey: flags.String("otc-access-key-id"),
 		SecretKey: flags.String("otc-access-key-key"),
