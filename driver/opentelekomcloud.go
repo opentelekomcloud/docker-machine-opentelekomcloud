@@ -452,7 +452,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-project-name",
-			EnvVar: "OS_TENANT_NAME",
+			EnvVar: "OS_PROJECT_NAME",
 			Usage:  "OpenTelekomCloud project name",
 		},
 		mcnflag.StringFlag{
@@ -568,7 +568,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-floating-ip-type",
-			EnvVar: "ELASTICIP_TYPE",
+			EnvVar: "OS_FLOATING_IP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type",
 			Value:  "5_bgp",
 		},
@@ -619,8 +619,8 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-endpoint-type",
-			EnvVar: "OS_ENDPOINT_TYPE",
-			Usage:  "OpenTelekomCloud endpoint type",
+			EnvVar: "OS_INTERFACE",
+			Usage:  "OpenTelekomCloud interface (endpoint) type",
 			Value:  "public",
 		},
 		mcnflag.BoolFlag{
@@ -643,7 +643,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.IntFlag{
 			Name:   "otc-root-volume-size",
-			EnvVar: "ROOT_VOLUME_SIZE",
+			EnvVar: "ROOT_VOLUME_SIZEROOT_VOLUME_SIZE",
 			Usage:  "Set volume size of root partition",
 			Value:  defaultVolumeSize,
 		},
