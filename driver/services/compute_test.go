@@ -6,6 +6,7 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/huaweicloud/golangsdk"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -166,12 +167,28 @@ func (c *Client) waitForInstanceIPBind(instanceID string, ip string, bind bool) 
 	})
 }
 
+func createServerGroup(client *Client) (group *servergroups.ServerGroup, err error) {
+	group, err = servergroups.Create(client.ComputeV2, servergroups.CreateOpts{
+		Name:     "test-group",
+		Policies: []string{"anti-affinity"},
+	}).Extract()
+	return
+}
+
+func deleteServerGroup(client *Client, id string) {
+	servergroups.Delete(client.ComputeV2, id)
+}
+
 // Test whole instance + floating IP workflow
 func TestClient_CreateInstance(t *testing.T) {
 	cleanupResources(t)
 
 	client := computeClient(t)
 	initNetwork(t, client)
+
+	grp, err := createServerGroup(client)
+	require.NoError(t, err)
+	defer deleteServerGroup(client, grp.ID)
 
 	vpc, err := client.CreateVPC(vpcName)
 	require.NoError(t, err)
@@ -197,14 +214,18 @@ func TestClient_CreateInstance(t *testing.T) {
 	imgRef, err := client.FindImage(defaultImage)
 	require.NoError(t, err)
 
-	opts := &servers.CreateOpts{
-		Name:             serverName,
-		FlavorName:       defaultFlavor,
-		AvailabilityZone: defaultAZ,
-		Networks:         []servers.Network{{UUID: subnet.ID}},
+	opts := &ExtendedServerOpts{
+		CreateOpts: &servers.CreateOpts{
+			Name:             serverName,
+			FlavorName:       defaultFlavor,
+			AvailabilityZone: defaultAZ,
+			Networks:         []servers.Network{{UUID: subnet.ID}},
+		},
+		SubnetID:    subnet.ID,
+		KeyPairName: kp.Name,
+		DiskOpts:    &DiskOpts{SourceID: imgRef, Size: 10, Type: "SATA"},
 	}
-	dOpts := &DiskOpts{SourceID: imgRef, Size: 10, Type: "SATA"}
-	instance, err := client.CreateInstance(opts, subnet.ID, kp.Name, dOpts)
+	instance, err := client.CreateInstance(opts)
 	require.NoError(t, err)
 	assert.NoError(t, client.WaitForInstanceStatus(instance.ID, InstanceStatusRunning))
 	defer func() {
