@@ -452,19 +452,22 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-project-name",
-			EnvVar: "OS_TENANT_NAME",
+			EnvVar: "OS_PROJECT_NAME",
 			Usage:  "OpenTelekomCloud project name",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-project-id",
-			EnvVar: "OS_TENANT_ID",
+			EnvVar: "OS_PROJECT_ID",
 			Usage:  "OpenTelekomCloud project ID",
-			Value:  "",
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-tenant-id",
+			Usage:  "OpenTelekomCloud project ID. DEPRECATED: use -otc-project-id instead",
+			EnvVar: "TENANT_ID",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-region",
-			EnvVar: "OS_REGION_NAME",
+			EnvVar: "REGION",
 			Usage:  "OpenTelekomCloud region name",
 			Value:  defaultRegion,
 		},
@@ -472,13 +475,11 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-access-key-id",
 			Usage:  "OpenTelekomCloud access key ID for AK/SK auth",
 			EnvVar: "ACCESS_KEY_ID",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-access-key-key",
 			Usage:  "OpenTelekomCloud secret access key for AK/SK auth",
 			EnvVar: "ACCESS_KEY_SECRET",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-availability-zone",
@@ -487,15 +488,14 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultAZ,
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-available-zone",
-			Usage: "OpenTelekomCloud availability zone. DEPRECATED: use -otc-availability-zone instead",
-			Value: "",
+			Name:   "otc-available-zone",
+			EnvVar: "AVAILABLE_ZONE",
+			Usage:  "OpenTelekomCloud availability zone. DEPRECATED: use -otc-availability-zone instead",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-flavor-id",
-			EnvVar: "OS_FLAVOR_ID",
+			EnvVar: "FLAVOR_ID",
 			Usage:  "OpenTelekomCloud flavor id to use for the instance",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-flavor-name",
@@ -505,9 +505,8 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-image-id",
-			EnvVar: "OS_IMAGE_ID",
+			EnvVar: "IMAGE_ID",
 			Usage:  "OpenTelekomCloud image id to use for the instance",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-image-name",
@@ -519,39 +518,38 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-keypair-name",
 			EnvVar: "OS_KEYPAIR_NAME",
 			Usage:  "OpenTelekomCloud keypair to use to SSH to the instance",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-vpc-id",
-			Usage: "OpenTelekomCloud VPC id the machine will be connected on",
-			Value: "",
+			Name:   "otc-vpc-id",
+			EnvVar: "VPC_ID",
+			Usage:  "OpenTelekomCloud VPC id the machine will be connected on",
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-vpc-name",
-			Usage: "OpenTelekomCloud VPC name the machine will be connected on",
-			Value: defaultVpcName,
+			Name:   "otc-vpc-name",
+			EnvVar: "OS_VPC_NAME",
+			Usage:  "OpenTelekomCloud VPC name the machine will be connected on",
+			Value:  defaultVpcName,
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-subnet-id",
-			Usage: "OpenTelekomCloud subnet id the machine will be connected on",
-			Value: "",
+			Name:   "otc-subnet-id",
+			EnvVar: "SUBNET_ID",
+			Usage:  "OpenTelekomCloud subnet id the machine will be connected on",
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-subnet-name",
-			Usage: "OpenTelekomCloud subnet name the machine will be connected on",
-			Value: defaultSubnetName,
+			Name:   "otc-subnet-name",
+			EnvVar: "OS_SUBNET_NAME",
+			Usage:  "OpenTelekomCloud subnet name the machine will be connected on",
+			Value:  defaultSubnetName,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-private-key-file",
 			EnvVar: "OS_PRIVATE_KEY_FILE",
 			Usage:  "Private key file to use for SSH (absolute path)",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-user-data-file",
 			EnvVar: "OS_USER_DATA_FILE",
-			Usage:  "File containing an userdata script",
-			Value:  "",
+			Usage:  "File containing an user data script",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-token",
@@ -562,17 +560,15 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-sec-groups",
 			EnvVar: "OS_SECURITY_GROUP",
 			Usage:  "Existing security groups to use, separated by comma",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-floating-ip",
-			EnvVar: "OS_FLOATINGIP",
+			EnvVar: "OS_FLOATING_IP",
 			Usage:  "OpenTelekomCloud floating IP to use",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-floating-ip-type",
-			EnvVar: "ELASTICIP_TYPE",
+			EnvVar: "OS_FLOATING_IP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type",
 			Value:  "5_bgp",
 		},
@@ -580,7 +576,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-elastic-ip-type",
 			EnvVar: "ELASTICIP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type. DEPRECATED! Use -otc-floating-ip-type instead",
-			Value:  "",
 		},
 		mcnflag.IntFlag{
 			Name:   "otc-bandwidth-size",
@@ -612,8 +607,8 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-ssh-user",
-			EnvVar: "OS_SSH_USER",
-			Usage:  "otc SSH user",
+			EnvVar: "SSH_USER",
+			Usage:  "Machine SSH username",
 			Value:  defaultSSHUser,
 		},
 		mcnflag.IntFlag{
@@ -623,13 +618,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultSSHPort,
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-endpoint-type",
-			Usage: "OpenTelekomCloud endpoint type",
-			Value: "publicURL",
-		},
-		mcnflag.BoolFlag{
-			Name:  "otc-validate-cert",
-			Usage: "Enable certification validation",
+			Name:   "otc-endpoint-type",
+			EnvVar: "OS_INTERFACE",
+			Usage:  "OpenTelekomCloud interface (endpoint) type",
+			Value:  "public",
 		},
 		mcnflag.BoolFlag{
 			Name:  "otc-skip-default-sg",
@@ -640,22 +632,26 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage: "Create security group with k8s ports allowed",
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-server-group",
-			Usage: "Define server group where server will be created",
+			Name:   "otc-server-group",
+			EnvVar: "OS_SERVER_GROUP",
+			Usage:  "Define server group where server will be created",
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-server-group-id",
-			Usage: "Define server group where server will be created by ID",
+			Name:   "otc-server-group-id",
+			EnvVar: "OS_SERVER_GROUP_ID",
+			Usage:  "Define server group where server will be created by ID",
 		},
 		mcnflag.IntFlag{
-			Name:  "otc-root-volume-size",
-			Usage: "Set volume size of root partition",
-			Value: defaultVolumeSize,
+			Name:   "otc-root-volume-size",
+			EnvVar: "ROOT_VOLUME_SIZEROOT_VOLUME_SIZE",
+			Usage:  "Set volume size of root partition",
+			Value:  defaultVolumeSize,
 		},
 		mcnflag.StringFlag{
-			Name:  "otc-root-volume-type",
-			Usage: "Set volume type of root partition (one of SATA, SAS, SSD)",
-			Value: defaultVolumeType,
+			Name:   "otc-root-volume-type",
+			EnvVar: "ROOT_VOLUME_TYPE",
+			Usage:  "Set volume type of root partition (one of SATA, SAS, SSD)",
+			Value:  defaultVolumeType,
 		},
 	}
 }
@@ -939,14 +935,17 @@ func (d *Driver) createSSHKey() error {
 func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.AuthURL = flags.String("otc-auth-url")
 	d.Cloud = flags.String("otc-cloud")
-	d.ValidateCert = flags.Bool("otc-validate-cert")
 	d.CACert = flags.String("otc-cacert")
 	d.DomainID = flags.String("otc-domain-id")
 	d.DomainName = flags.String("otc-domain-name")
 	d.Username = flags.String("otc-username")
 	d.Password = flags.String("otc-password")
 	d.ProjectName = flags.String("otc-project-name")
-	d.ProjectID = flags.String("otc-project-id")
+	projectID := flags.String("otc-tenant-id")
+	if projectID == "" {
+		projectID = flags.String("otc-project-id")
+	}
+	d.ProjectID = projectID
 	d.Region = flags.String("otc-region")
 	d.EndpointType = flags.String("otc-endpoint-type")
 	d.FlavorID = flags.String("otc-flavor-id")
