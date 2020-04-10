@@ -68,7 +68,7 @@ Flag | Env variable | Default value | Description
 `--otc-floating-ip`         | `OS_FLOATING_IP`          |                                       | Floating IP to use
 `--otc-floating-ip-type`    | `OS_FLOATING_IP_TYPE`     | 5_bgp                                 | Bandwidth type (either `5_bgp` or `5_mailbgp`)
 `--otc-image-id`            | `IMAGE_ID`                |                                       | Image id to use for the instance
-`--otc-image-name`          | `OS_IMAGE_NAME`           | Standard_Debian_10_latest             | Image name to use for the instance
+`--otc-image-name`          | `OS_IMAGE_NAME`           | Standard_Ubuntu_18.04_latest          | Image name to use for the instance
 `--otc-ip-version    `      | `OS_IP_VERSION`           | 4                                     | Version of IP address assigned for the machine (only 4 is supported by OTC for now)
 `--otc-k8s-group`           |                           |                                       | Create security group with k8s ports allowed
 `--otc-keypair-name`        | `OS_KEYPAIR_NAME`         |                                       | Key pair to use to SSH to the instance
@@ -83,7 +83,7 @@ Flag | Env variable | Default value | Description
 `--otc-skip-default-sg`     |                           |                                       | Don't create default security group
 `--otc-skip-ip`             |                           |                                       | If set, elastic IP won't be created, machine IP will be set to instance local IP
 `--otc-ssh-port`            | `OS_SSH_PORT`             | 22                                    | Machine SSH port
-`--otc-ssh-user`            | `SSH_USER`                | linux                                 | SSH user
+`--otc-ssh-user`            | `SSH_USER`                | ubuntu                                | SSH user
 `--otc-subnet-id`           | `SUBNET_ID`               |                                       | Subnet id the machine will be connected on
 `--otc-subnet-name`         | `SUBNET_NAME`             | subnet-docker-machine                 | Subnet name the machine will be connected on
 `--otc-token`               | `OS_TOKEN`                |                                       | Authorization token
