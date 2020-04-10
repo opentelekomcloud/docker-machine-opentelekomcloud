@@ -40,7 +40,7 @@ docker-machine create -d otc --otc-cloud otc default
 
 **Machine with following setup will be started:**
 - **Flavor** `s2.large.2`
-- **Image** `Standard_Debian_10_latest`
+- **Image** `Standard_Ubuntu_18.04_latest`
 
 *Removing machine will remove all resources created on machine creation*
 
