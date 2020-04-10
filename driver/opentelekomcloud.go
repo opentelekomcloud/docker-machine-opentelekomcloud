@@ -42,8 +42,8 @@ const (
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-03"
 	defaultFlavor        = "s2.large.2"
-	defaultImage         = "Standard_Debian_10_latest"
-	defaultSSHUser       = "linux"
+	defaultImage         = "Standard_Ubuntu_18.04_latest"
+	defaultSSHUser       = "ubuntu"
 	defaultSSHPort       = 22
 	defaultRegion        = "eu-de"
 	defaultAuthURL       = "https://iam.eu-de.otc.t-systems.com/v3"
