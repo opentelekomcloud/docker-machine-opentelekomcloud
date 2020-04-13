@@ -9,6 +9,7 @@ import (
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
+	"github.com/hashicorp/go-multierror"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/stretchr/testify/assert"
@@ -407,4 +408,17 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	assert.NoError(t, driver.resolveIDs())
 	assert.Equal(t, group.ID, driver.ServerGroupID)
 
+}
+
+func TestDriver_FaultyRemove(t *testing.T) {
+	driver, derr := defaultDriver()
+	require.NoError(t, derr)
+	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initNetwork())
+	require.NoError(t, driver.resolveIDs())
+	driver.SubnetID.DriverManaged = true
+	driver.VpcID.DriverManaged = true
+	driver.KeyPairName.DriverManaged = true
+	err := multierror.Append(driver.Remove())
+	assert.Equal(t, 4, err.Len())
 }
