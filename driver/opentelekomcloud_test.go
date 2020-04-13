@@ -362,7 +362,7 @@ func TestDriver_SetConfigFromFlagsDeprecated(t *testing.T) {
 // This test won't check anything really, it exists only for debug purposes
 func TestDriver_CreateWithUserData(t *testing.T) {
 	fileName := "tmp.sh"
-	userData := []byte("#!/usr/bin/bash\necho touch > /tmp/my")
+	userData := []byte("#!/bin/bash\necho touch > /tmp/my")
 	require.NoError(t, ioutil.WriteFile(fileName, userData, os.ModePerm))
 	defer func() {
 		_ = os.Remove(fileName)
@@ -381,6 +381,32 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 	}()
 	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
+}
+
+func TestDriver_UserDataRaw(t *testing.T) {
+	fileName := "tmp.sh"
+	userData := []byte("#!/bin/bash\necho touch > /tmp/my")
+	require.NoError(t, ioutil.WriteFile(fileName, userData, os.ModePerm))
+	defer func() {
+		_ = os.Remove(fileName)
+	}()
+
+	driverFl, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":          "otc",
+			"otc-user-data-file": fileName,
+		})
+	require.NoError(t, err)
+	require.NoError(t, driverFl.getUserData())
+
+	driverRaw, err := newDriverFromFlags(
+		map[string]interface{}{
+			"otc-cloud":         "otc",
+			"otc-user-data-raw": string(userData),
+		})
+	require.NoError(t, err)
+
+	assert.Equal(t, driverFl.UserData, driverRaw.UserData)
 }
 
 func TestDriver_ResolveServerGroup(t *testing.T) {
