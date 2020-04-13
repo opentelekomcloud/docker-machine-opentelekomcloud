@@ -29,6 +29,7 @@ var defaultFlags = map[string]interface{}{
 	"otc-cloud":       "otc",
 	"otc-subnet-name": subnetName,
 	"otc-vpc-name":    vpcName,
+	"otc-tags":        "machine,test",
 }
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {

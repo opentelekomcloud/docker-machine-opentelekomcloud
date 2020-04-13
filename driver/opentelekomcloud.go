@@ -112,6 +112,7 @@ type Driver struct {
 	RootVolumeOpts         *services.DiskOpts `json:"-"`
 	UserDataFile           string             `json:"-"`
 	UserData               []byte             `json:"-"`
+	Tags                   []string           `json:"-"`
 	IPVersion              int                `json:"-"`
 	skipEIPCreation        bool
 	eipConfig              *services.ElasticIPOpts
@@ -407,6 +408,13 @@ func (d *Driver) createInstance() error {
 		return err
 	}
 	d.InstanceID = instance.ID
+
+	if len(d.Tags) > 0 {
+		if err := d.client.AddTags(d.InstanceID, d.Tags); err != nil {
+			return err
+		}
+	}
+
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
 		return err
 	}
@@ -661,6 +669,11 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			EnvVar: "ROOT_VOLUME_SIZEROOT_VOLUME_SIZE",
 			Usage:  "Set volume size of root partition",
 			Value:  defaultVolumeSize,
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-tags",
+			EnvVar: "OS_TAGS",
+			Usage:  "Comma-separated list of instance tags",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-root-volume-type",
@@ -982,6 +995,10 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.UserData = []byte(flags.String("otc-user-data-raw"))
 	d.ServerGroup = flags.String("otc-server-group")
 	d.ServerGroupID = flags.String("otc-server-group-id")
+	tags := flags.String("otc-tags")
+	if tags != "" {
+		d.Tags = strings.Split(tags, ",")
+	}
 	d.AccessKey = services.AccessKey{
 		AccessKey: flags.String("otc-access-key-id"),
 		SecretKey: flags.String("otc-access-key-key"),

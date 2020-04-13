@@ -29,6 +29,7 @@ import (
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/secgroups"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/startstop"
+	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/tags"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/flavors"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/huaweicloud/golangsdk/openstack/imageservice/v2/images"
@@ -456,4 +457,9 @@ func (c *Client) FindServerGroup(groupName string) (result string, err error) {
 		return true, nil
 	})
 	return
+}
+
+func (c *Client) AddTags(instanceID string, serverTags []string) error {
+	opts := tags.CreateOpts{Tags: serverTags}
+	return tags.Create(c.ComputeV2, instanceID, opts).Err
 }
