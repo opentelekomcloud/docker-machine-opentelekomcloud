@@ -111,6 +111,7 @@ type Driver struct {
 	Token                  string             `json:"token,omitempty"`
 	RootVolumeOpts         *services.DiskOpts `json:"-"`
 	UserDataFile           string             `json:"-"`
+	UserData               []byte             `json:"-"`
 	IPVersion              int                `json:"-"`
 	skipEIPCreation        bool
 	eipConfig              *services.ElasticIPOpts
@@ -356,6 +357,18 @@ func (d *Driver) Create() error {
 	return nil
 }
 
+func (d *Driver) getUserData() error {
+	if d.UserDataFile == "" || len(d.UserData) != 0 {
+		return nil
+	}
+	userData, err := ioutil.ReadFile(d.UserDataFile)
+	if err != nil {
+		return err
+	}
+	d.UserData = userData
+	return nil
+}
+
 func (d *Driver) createInstance() error {
 	if d.InstanceID != "" {
 		return nil
@@ -384,13 +397,10 @@ func (d *Driver) createInstance() error {
 		ServerGroupID: d.ServerGroupID,
 	}
 
-	if d.UserDataFile != "" {
-		userData, err := ioutil.ReadFile(d.UserDataFile)
-		if err != nil {
-			return err
-		}
-		serverOpts.UserData = userData
+	if err := d.getUserData(); err != nil {
+		return err
 	}
+	serverOpts.UserData = d.UserData
 
 	instance, err := d.client.CreateInstance(serverOpts)
 	if err != nil {
@@ -551,6 +561,10 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-user-data-file",
 			EnvVar: "OS_USER_DATA_FILE",
 			Usage:  "File containing an user data script",
+		},
+		mcnflag.StringFlag{
+			Name:  "otc-user-data-raw",
+			Usage: "Contents of user data file as a string",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-token",
@@ -965,6 +979,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.PrivateKeyFile = flags.String("otc-private-key-file")
 	d.Token = flags.String("otc-token")
 	d.UserDataFile = flags.String("otc-user-data-file")
+	d.UserData = []byte(flags.String("otc-user-data-raw"))
 	d.ServerGroup = flags.String("otc-server-group")
 	d.ServerGroupID = flags.String("otc-server-group-id")
 	d.AccessKey = services.AccessKey{
@@ -1022,6 +1037,9 @@ func (d *Driver) checkConfig() error {
 		d.Token == "" &&
 		(d.AccessKey.AccessKey == "" || d.AccessKey.SecretKey == "") {
 		return fmt.Errorf("at least one authorization method must be provided")
+	}
+	if len(d.UserData) > 0 && d.UserDataFile != "" {
+		return fmt.Errorf("both `-otc-user-data` and `-otc-user-data` is defined")
 	}
 	return nil
 }
