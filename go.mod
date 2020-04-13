@@ -11,6 +11,7 @@ require (
 	github.com/docker/machine v0.16.2
 	github.com/gophercloud/gophercloud v0.7.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20200104035643-cb37ab634bff
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/huaweicloud/golangsdk v0.0.0-20200122065641-034e66c4f159
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/stretchr/testify v1.4.0

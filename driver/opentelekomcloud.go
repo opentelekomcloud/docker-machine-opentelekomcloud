@@ -30,6 +30,7 @@ import (
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/gophercloud/utils/openstack/clientconfig"
+	"github.com/hashicorp/go-multierror"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 
@@ -808,32 +809,33 @@ func (d *Driver) deleteSecGroups() error {
 }
 
 func (d *Driver) Remove() error {
+	var errs error
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
 	if err := d.deleteInstance(); err != nil {
-		return err
+		errs = multierror.Append(errs, err)
 	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	if d.FloatingIP.DriverManaged && d.FloatingIP.Value != "" {
 		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
-			return err
+			errs = multierror.Append(errs, err)
 		}
 	}
 	if err := d.deleteSubnet(); err != nil {
-		return err
+		errs = multierror.Append(errs, err)
 	}
 	if err := d.deleteSecGroups(); err != nil {
-		return err
+		errs = multierror.Append(errs, err)
 	}
 	if err := d.deleteVPC(); err != nil {
-		return err
+		errs = multierror.Append(errs, err)
 	}
-	return nil
+	return errs
 }
 
 func (d *Driver) Restart() error {
