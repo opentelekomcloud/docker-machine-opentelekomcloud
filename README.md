@@ -6,6 +6,35 @@
 
 OpenTelekomCloud driver for docker-machine
 
+### Comparing with other drivers
+
+There are two more options of docker-machine driver suitable for usage with OpenTelekomCloud:
+ * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
+ * [DockerMachine4OTC](https://github.com/Huawei/DockerMachineDriver4OTC) ― older OTC driver implementation by Huawei
+
+This driver is inspired by `docker-machine-openstack` and targets to provide full backward compatibility with `DockerMachineDriver4OTC`.
+
+Backward compatibility meaning, that this driver uses flags and env variable naming that differs from OpenStack convention.
+Thus, in versions `0.3+` duplicating options will be removed and all environment variables will be prefixed with `OS_`.
+
+Feature                                         | OTC (new)     | OTC (old) | Openstack
+---                                             | ---           | ---       | ---
+Automated creation of required infrastructure   | **Yes**       | No        | No
+Support of `clouds.yaml` and `OS_CLOUD`         | **Yes**       | No        | No
+Support using of resource names instead of IDs  | Yes           | No        | Yes
+User data injection                             | Yes           | No        | Yes
+Floating IP pool selection                      | No            | No        | Yes
+Custom CA usage                                 | No            | No        | Yes
+Insecure mode (without TLS certificate check)   | No            | No        | Yes
+Bandwidth configuration                         | Yes           | Yes       | No
+Root volume configuration                       | Yes           | Yes       | No
+Optional usage of floating IP                   | Yes           | Yes       | No
+AK/SK auth                                      | Yes           | Yes       | No
+Server group                                    | **Yes**       | No        | No
+Security group(s)                               | Multiple      | Single    | Multiple
+Prepared k8s security group                     | Yes           | No        | No
+Usage with rancher                              | Needs setup   | Built-in  | Built-in
+
 ### Installation
 
 Driver can be installed several ways
@@ -16,12 +45,16 @@ _(Requires Go 1.11+, gcc and make installed)_
 2. Run `make build && sudo make install`, driver for linux will be built and copied to `/usr/local/bin`
 
 #### Using built binary
-Already built driver for both Linux and Windows distributions can be found in
+An already built driver for both Linux and Windows distributions can be found in
 [releases section](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/releases)
 
 You will have to copy driver to directory in `PATH` so `docker-machine` would be able to find it
 
 ### Usage
+
+`docker-machine-opentelekomcloud` can be used either as Rancher node driver or as stand-alone Docker Machine driver
+
+#### Stand-alone
 
 `OpenTelekomCloud` driver processes existing `clouds.yaml` files to authenticate in OTC
 
@@ -92,3 +125,7 @@ Flag | Env variable | Default value | Description
 `--otc-username`            | `OS_USERNAME`             |                                       | OpenTelekomCloud username
 `--otc-vpc-id`              | `VPC_ID`                  |                                       | VPC id the machine will be connected on
 `--otc-vpc-name`            | `OS_VPC_NAME`             | vpc-docker-machine                    | VPC name the machine will be connected on
+
+#### With rancher
+
+See [usage with rancher](usage-with-rancher.md)
