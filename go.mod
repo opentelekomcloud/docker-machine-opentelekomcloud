@@ -9,12 +9,10 @@ require (
 	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/machine v0.16.2
-	github.com/gophercloud/gophercloud v0.7.0 // indirect
-	github.com/gophercloud/utils v0.0.0-20200104035643-cb37ab634bff
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/huaweicloud/golangsdk v0.0.0-20200122065641-034e66c4f159
-	github.com/kr/pretty v0.2.0 // indirect
+	github.com/huaweicloud/golangsdk v0.0.0-20200416034153-3d1c2830a7e3
+	github.com/opentelekomcloud-infra/crutch-house v0.0.0-20200417125255-7c1222a55ce9
 	github.com/sirupsen/logrus v1.5.0 // indirect
-	github.com/stretchr/testify v1.4.0
-	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d // indirect
+	github.com/sirupsen/logrus v1.5.0 // indirect
+	github.com/stretchr/testify v1.5.1
 )
