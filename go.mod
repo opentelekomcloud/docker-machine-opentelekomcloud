@@ -11,7 +11,7 @@ require (
 	github.com/docker/machine v0.16.2
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/huaweicloud/golangsdk v0.0.0-20200416034153-3d1c2830a7e3
-	github.com/opentelekomcloud-infra/crutch-house v0.0.0-20200417125255-7c1222a55ce9
+	github.com/opentelekomcloud-infra/crutch-house v0.1.0
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	github.com/stretchr/testify v1.5.1
