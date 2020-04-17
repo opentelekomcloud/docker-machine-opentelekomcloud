@@ -13,6 +13,5 @@ require (
 	github.com/huaweicloud/golangsdk v0.0.0-20200416034153-3d1c2830a7e3
 	github.com/opentelekomcloud-infra/crutch-house v0.1.0
 	github.com/sirupsen/logrus v1.5.0 // indirect
-	github.com/sirupsen/logrus v1.5.0 // indirect
 	github.com/stretchr/testify v1.5.1
 )
