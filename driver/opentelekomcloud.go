@@ -1,19 +1,3 @@
-/*
-   Copyright 2020 T-Systems GmbH
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-
-*/
 package opentelekomcloud
 
 import (
@@ -29,12 +13,11 @@ import (
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/hashicorp/go-multierror"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
-
-	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
+	"github.com/opentelekomcloud-infra/crutch-house/clientconfig"
+	"github.com/opentelekomcloud-infra/crutch-house/services"
 )
 
 const (
@@ -86,7 +69,8 @@ type Driver struct {
 	ProjectName            string             `json:"project_name,omitempty"`
 	ProjectID              string             `json:"project_id,omitempty"`
 	Region                 string             `json:"region,omitempty"`
-	AccessKey              services.AccessKey `json:"ak_sk,omitempty"`
+	AccessKey              string             `json:"access_key,omitempty"`
+	SecretKey              string             `json:"secret_key,omitempty"`
 	AvailabilityZone       string             `json:"-"`
 	EndpointType           string             `json:"endpoint_type,omitempty"`
 	InstanceID             string             `json:"instance_id"`
@@ -116,7 +100,7 @@ type Driver struct {
 	IPVersion              int                `json:"-"`
 	skipEIPCreation        bool
 	eipConfig              *services.ElasticIPOpts
-	client                 *services.Client
+	client                 services.Client
 }
 
 func (d *Driver) createVPC() error {
@@ -265,28 +249,28 @@ func (d *Driver) createResources() error {
 }
 
 func (d *Driver) Authenticate() error {
+	if d.client != nil {
+		return nil
+	}
 	opts := &clientconfig.ClientOpts{
 		Cloud:        d.Cloud,
 		RegionName:   d.Region,
 		EndpointType: d.EndpointType,
 		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:           d.AuthURL,
-			Username:          d.Username,
-			Password:          d.Password,
-			ProjectName:       d.ProjectName,
-			ProjectID:         d.ProjectID,
-			ProjectDomainName: d.DomainName,
-			ProjectDomainID:   d.DomainID,
-			Token:             d.Token,
+			AuthURL:     d.AuthURL,
+			Username:    d.Username,
+			Password:    d.Password,
+			ProjectName: d.ProjectName,
+			ProjectID:   d.ProjectID,
+			DomainName:  d.DomainName,
+			DomainID:    d.DomainID,
+			AccessKey:   d.AccessKey,
+			SecretKey:   d.SecretKey,
+			Token:       d.Token,
 		},
 	}
-	if d.Cloud != "" || (d.Username != "" && d.Password != "") || d.Token != "" {
-		return d.client.AuthenticateWithToken(opts)
-	}
-	if d.AccessKey.AccessKey != "" && d.AccessKey.SecretKey != "" {
-		return d.client.AuthenticateWithAKSK(opts, d.AccessKey)
-	}
-	return fmt.Errorf("can't define way to authenticate")
+	d.client = services.NewClient(opts)
+	return d.client.Authenticate()
 }
 
 func (d *Driver) createFloatingIP() error {
@@ -881,7 +865,7 @@ func NewDriver(hostName, storePath string) *Driver {
 			SSHPort:     defaultSSHPort,
 			StorePath:   storePath,
 		},
-		client: &services.Client{},
+		client: nil,
 	}
 }
 
@@ -999,10 +983,8 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	if tags != "" {
 		d.Tags = strings.Split(tags, ",")
 	}
-	d.AccessKey = services.AccessKey{
-		AccessKey: flags.String("otc-access-key-id"),
-		SecretKey: flags.String("otc-access-key-key"),
-	}
+	d.AccessKey = flags.String("otc-access-key-id")
+	d.SecretKey = flags.String("otc-access-key-key")
 
 	d.RootVolumeOpts = &services.DiskOpts{
 		SourceID: flags.String("otc-image-id"),
@@ -1052,7 +1034,7 @@ func (d *Driver) checkConfig() error {
 	if d.Cloud == "" &&
 		(d.Username == "" || d.Password == "") &&
 		d.Token == "" &&
-		(d.AccessKey.AccessKey == "" || d.AccessKey.SecretKey == "") {
+		(d.AccessKey == "" || d.SecretKey == "") {
 		return fmt.Errorf("at least one authorization method must be provided")
 	}
 	if len(d.UserData) > 0 && d.UserDataFile != "" {

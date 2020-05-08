@@ -12,10 +12,9 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/huaweicloud/golangsdk"
 	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
+	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 )
 
 var (
@@ -414,12 +413,14 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
-	group, err := servergroups.Create(driver.client.ComputeV2, servergroups.CreateOpts{
+	group, err := driver.client.CreateServerGroup(&servergroups.CreateOpts{
 		Name:     "test-group",
 		Policies: []string{"anti-affinity"},
-	}).Extract()
+	})
 	require.NoError(t, err)
-	defer servergroups.Delete(driver.client.ComputeV2, group.ID)
+	defer func() {
+		_ = driver.client.DeleteServerGroup(group.ID)
+	}()
 
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
