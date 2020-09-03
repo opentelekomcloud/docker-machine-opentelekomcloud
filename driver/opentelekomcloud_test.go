@@ -25,7 +25,7 @@ var (
 )
 
 var defaultFlags = map[string]interface{}{
-	"otc-cloud":       "otc",
+	"otc-cloud":       "functest_cloud",
 	"otc-subnet-name": subnetName,
 	"otc-vpc-name":    vpcName,
 	"otc-tags":        "machine,test",
