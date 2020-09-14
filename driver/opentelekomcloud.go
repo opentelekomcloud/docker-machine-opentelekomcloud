@@ -228,6 +228,7 @@ func (d *Driver) createResources() error {
 		return err
 	}
 	if err := d.initCompute(); err != nil {
+		return err
 	}
 	if err := d.resolveIDs(); err != nil {
 		return err

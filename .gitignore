@@ -22,4 +22,4 @@ clouds.yaml
 *_rsa
 
 .vscode
-driver/machines
+machines
