@@ -103,20 +103,28 @@ type Driver struct {
 	client                 services.Client
 }
 
+// logHttp500 appends error message with response 500 body
+func logHttp500(err error) error {
+	if e, ok := err.(golangsdk.ErrDefault500); ok {
+		return fmt.Errorf("%s: %s", e, string(e.Body))
+	}
+	return err
+}
+
 func (d *Driver) createVPC() error {
 	if d.VpcID.Value != "" {
 		return nil
 	}
 	vpc, err := d.client.CreateVPC(d.VpcName)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail creating VPC: %s", logHttp500(err))
 	}
 	d.VpcID = managedSting{
 		Value:         vpc.ID,
 		DriverManaged: true,
 	}
 	if err := d.client.WaitForVPCStatus(d.VpcID.Value, "OK"); err != nil {
-		return err
+		return fmt.Errorf("fail waiting for VPC status `OK`: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -127,14 +135,14 @@ func (d *Driver) createSubnet() error {
 	}
 	subnet, err := d.client.CreateSubnet(d.VpcID.Value, d.SubnetName)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail creating subnet: %s", logHttp500(err))
 	}
 	d.SubnetID = managedSting{
 		Value:         subnet.ID,
 		DriverManaged: true,
 	}
 	if err := d.client.WaitForSubnetStatus(d.SubnetID.Value, "ACTIVE"); err != nil {
-		return err
+		return fmt.Errorf("fail waiting for subnet status `ACTIVE`: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -144,7 +152,7 @@ func (d *Driver) createK8sGroup() error {
 	}
 	sg, err := d.client.CreateSecurityGroup(d.K8sSecurityGroup, k8sPorts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail creating k8s security group: %s", logHttp500(err))
 	}
 	d.K8sSecurityGroupID = sg.ID
 	return nil
@@ -159,7 +167,7 @@ func (d *Driver) createDefaultGroup() error {
 		services.PortRange{From: dockerPort},
 	)
 	if err != nil {
-		return err
+		return fmt.Errorf("fail creating default security group: %s", logHttp500(err))
 	}
 	d.ManagedSecurityGroupID = sg.ID
 	return nil
@@ -172,7 +180,7 @@ func (d *Driver) resolveIDs() error {
 	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to find VPC by name: %s", logHttp500(err))
 		}
 		d.VpcID = managedSting{Value: vpcID}
 	}
@@ -180,7 +188,7 @@ func (d *Driver) resolveIDs() error {
 	if d.SubnetID.Value == "" && d.SubnetName != "" {
 		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to find subnet by name: %s", logHttp500(err))
 		}
 		d.SubnetID = managedSting{Value: subnetID}
 	}
@@ -188,7 +196,7 @@ func (d *Driver) resolveIDs() error {
 	if d.FlavorID == "" && d.FlavorName != "" {
 		flavID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
-			return err
+			return fmt.Errorf("fail when searching flavor by name: %s", logHttp500(err))
 		}
 		if flavID == "" {
 			return fmt.Errorf(notFound, "flavor", d.FlavorName)
@@ -198,7 +206,7 @@ func (d *Driver) resolveIDs() error {
 	if d.RootVolumeOpts.SourceID == "" && d.ImageName != "" {
 		imageID, err := d.client.FindImage(d.ImageName)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to find image by name: %s", logHttp500(err))
 		}
 		if imageID == "" {
 			return fmt.Errorf(notFound, "image", d.ImageName)
@@ -207,14 +215,14 @@ func (d *Driver) resolveIDs() error {
 	}
 	sgIDs, err := d.client.FindSecurityGroups(d.SecurityGroups)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to resolve security group IDs: %s", logHttp500(err))
 	}
 	d.SecurityGroupIDs = sgIDs
 
 	if d.ServerGroupID == "" && d.ServerGroup != "" {
 		serverGroupID, err := d.client.FindServerGroup(d.ServerGroup)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to resolve server group: %s", logHttp500(err))
 		}
 		d.ServerGroupID = serverGroupID
 	}
@@ -222,28 +230,36 @@ func (d *Driver) resolveIDs() error {
 	return nil
 }
 
+// resCreateErr wraps errors happening in createResources
+func resCreateErr(orig error) error {
+	if orig != nil {
+		return fmt.Errorf("fail in required resource creation: %s", logHttp500(orig))
+	}
+	return nil
+}
+
 func (d *Driver) createResources() error {
 	// network init
 	if err := d.initNetwork(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.initCompute(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.resolveIDs(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.createVPC(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.createSubnet(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.createDefaultGroup(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 	if err := d.createK8sGroup(); err != nil {
-		return err
+		return resCreateErr(err)
 	}
 
 	return nil
@@ -271,22 +287,25 @@ func (d *Driver) Authenticate() error {
 		},
 	}
 	d.client = services.NewClient(opts)
-	return d.client.Authenticate()
+	if err := d.client.Authenticate(); err != nil {
+		return fmt.Errorf("failed to authenticate the client: %s", logHttp500(err))
+	}
+	return nil
 }
 
 func (d *Driver) createFloatingIP() error {
 	if d.FloatingIP.Value == "" {
 		eip, err := d.client.CreateEIP(d.eipConfig)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to create floating IP: %s", logHttp500(err))
 		}
 		if err := d.client.WaitForEIPActive(eip.ID); err != nil {
-			return err
+			return fmt.Errorf("failed to wait for floating IP to be active: %s", logHttp500(err))
 		}
 		d.FloatingIP = managedSting{Value: eip.PublicAddress, DriverManaged: true}
 	}
 	if err := d.client.BindFloatingIP(d.FloatingIP.Value, d.InstanceID); err != nil {
-		return err
+		return fmt.Errorf("failed to bind floating IP: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -294,7 +313,7 @@ func (d *Driver) createFloatingIP() error {
 func (d *Driver) useLocalIP() error {
 	instance, err := d.client.GetInstanceStatus(d.InstanceID)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get instance (%s) status: %s", d.InstanceID, logHttp500(err))
 	}
 	for _, addrPool := range instance.Addresses {
 		addrDetails := addrPool.([]interface{})[0].(map[string]interface{})
@@ -349,7 +368,7 @@ func (d *Driver) getUserData() error {
 	}
 	userData, err := ioutil.ReadFile(d.UserDataFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load user data file: %s", err)
 	}
 	d.UserData = userData
 	return nil
@@ -390,18 +409,18 @@ func (d *Driver) createInstance() error {
 
 	instance, err := d.client.CreateInstance(serverOpts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create compute v2 instance: %s", logHttp500(err))
 	}
 	d.InstanceID = instance.ID
 
 	if len(d.Tags) > 0 {
 		if err := d.client.AddTags(d.InstanceID, d.Tags); err != nil {
-			return err
+			return fmt.Errorf("failed to add instance tags: %s", logHttp500(err))
 		}
 	}
 
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return err
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -706,7 +725,7 @@ func (d *Driver) GetState() (state.State, error) {
 	}
 	instance, err := d.client.GetInstanceStatus(d.InstanceID)
 	if err != nil {
-		return state.None, err
+		return state.None, fmt.Errorf("failed to get instance state: %s", logHttp500(err))
 	}
 	switch instance.Status {
 	case services.InstanceStatusRunning:
@@ -729,9 +748,12 @@ func (d *Driver) Start() error {
 		return err
 	}
 	if err := d.client.StartInstance(d.InstanceID); err != nil {
-		return err
+		return fmt.Errorf("failed to start instance: %s", err)
 	}
-	return d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning)
+	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
+	}
+	return nil
 }
 
 func (d *Driver) Stop() error {
@@ -739,9 +761,12 @@ func (d *Driver) Stop() error {
 		return err
 	}
 	if err := d.client.StopInstance(d.InstanceID); err != nil {
-		return err
+		return fmt.Errorf("failed to stop instance: %s", logHttp500(err))
 	}
-	return d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusStopped)
+	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusStopped); err != nil {
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
+	}
+	return nil
 }
 
 func (d *Driver) Kill() error {
@@ -753,13 +778,13 @@ func (d *Driver) deleteInstance() error {
 		return err
 	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
-		return err
+		return fmt.Errorf("failed to delete instance: %s", logHttp500(err))
 	}
 	err := d.client.WaitForInstanceStatus(d.InstanceID, "")
 	switch err.(type) {
 	case golangsdk.ErrDefault404:
 	default:
-		return err
+		return fmt.Errorf("failed to wait for instance status after deletion: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -771,13 +796,13 @@ func (d *Driver) deleteSubnet() error {
 	if d.SubnetID.DriverManaged {
 		err := d.client.DeleteSubnet(d.VpcID.Value, d.SubnetID.Value)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to delete subnet: %s", logHttp500(err))
 		}
 		err = d.client.WaitForSubnetStatus(d.SubnetID.Value, "")
 		switch err.(type) {
 		case golangsdk.ErrDefault404:
 		default:
-			return err
+			return fmt.Errorf("failed to wait for subnet status after deletion: %s", logHttp500(err))
 		}
 	}
 	return nil
@@ -790,13 +815,13 @@ func (d *Driver) deleteVPC() error {
 	if d.VpcID.DriverManaged {
 		err := d.client.DeleteVPC(d.VpcID.Value)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to delete VPC: %s", logHttp500(err))
 		}
 		err = d.client.WaitForVPCStatus(d.VpcID.Value, "")
 		switch err.(type) {
 		case golangsdk.ErrDefault404:
 		default:
-			return err
+			return fmt.Errorf("failed to wait for VPC status after deletion: %s", logHttp500(err))
 		}
 	}
 	return nil
@@ -811,10 +836,10 @@ func (d *Driver) deleteSecGroups() error {
 			continue
 		}
 		if err := d.client.DeleteSecurityGroup(id); err != nil {
-			return err
+			return fmt.Errorf("failed to delete security group: %s", logHttp500(err))
 		}
 		if err := d.client.WaitForGroupDeleted(id); err != nil {
-			return err
+			return fmt.Errorf("failed to wait for security group status after deletion: %s", logHttp500(err))
 		}
 	}
 	return nil
@@ -830,12 +855,12 @@ func (d *Driver) Remove() error {
 	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHttp500(err)))
 		}
 	}
 	if d.FloatingIP.DriverManaged && d.FloatingIP.Value != "" {
 		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
-			errs = multierror.Append(errs, err)
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHttp500(err)))
 		}
 	}
 	if err := d.deleteSubnet(); err != nil {
@@ -872,20 +897,20 @@ func NewDriver(hostName, storePath string) *Driver {
 
 func (d *Driver) initCompute() error {
 	if err := d.Authenticate(); err != nil {
-		return err
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitCompute(); err != nil {
-		return err
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
 	}
 	return nil
 }
 
 func (d *Driver) initNetwork() error {
 	if err := d.Authenticate(); err != nil {
-		return err
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitNetwork(); err != nil {
-		return err
+		return fmt.Errorf("failed to initialize VPCv1 service: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -898,18 +923,18 @@ func (d *Driver) loadSSHKey() error {
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
 	privateKey, err := ioutil.ReadFile(d.PrivateKeyFile)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read private key: %s", err)
 	}
 	publicKey, err := d.client.GetPublicKey(d.KeyPairName.Value)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to get public key: %s", logHttp500(err))
 	}
 	privateKeyPath := d.GetSSHKeyPath()
 	if err := ioutil.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
-		return err
+		return fmt.Errorf("failed to write private key file: %s", err)
 	}
 	if err := ioutil.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
-		return err
+		return fmt.Errorf("failed to write public key file: %s", err)
 	}
 
 	return nil
@@ -918,7 +943,7 @@ func (d *Driver) loadSSHKey() error {
 func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	kp, err := d.client.CreateKeyPair(d.KeyPairName.Value, string(publicKey))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create key pair: %s", logHttp500(err))
 	}
 	return kp.PublicKey, nil
 }
@@ -933,7 +958,7 @@ func (d *Driver) createSSHKey() error {
 	d.PrivateKeyFile = keyPath
 	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read public key file: %s", err)
 	}
 	d.KeyPairName = managedSting{d.KeyPairName.Value, true}
 	if err := d.initCompute(); err != nil {
