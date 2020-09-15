@@ -230,9 +230,10 @@ func (d *Driver) resolveIDs() error {
 	return nil
 }
 
-func crMsg(orig error) error {
+// resCreateErr wraps errors happening in createResources
+func resCreateErr(orig error) error {
 	if orig != nil {
-		return fmt.Errorf("fail in createResources: %s", logHttp500(orig))
+		return fmt.Errorf("fail in required resource creation: %s", logHttp500(orig))
 	}
 	return nil
 }
@@ -240,25 +241,25 @@ func crMsg(orig error) error {
 func (d *Driver) createResources() error {
 	// network init
 	if err := d.initNetwork(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.initCompute(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.resolveIDs(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.createVPC(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.createSubnet(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.createDefaultGroup(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 	if err := d.createK8sGroup(); err != nil {
-		return crMsg(err)
+		return resCreateErr(err)
 	}
 
 	return nil
