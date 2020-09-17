@@ -10,18 +10,19 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/hashicorp/go-multierror"
-	"github.com/huaweicloud/golangsdk"
-	"github.com/huaweicloud/golangsdk/openstack/compute/v2/extensions/servergroups"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
+	"github.com/opentelekomcloud-infra/crutch-house/utils"
+	"github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	secGroup     = services.RandomString(10, "sg-")
-	vpcName      = services.RandomString(10, "vpc-")
-	subnetName   = services.RandomString(15, "subnet-")
-	instanceName = services.RandomString(15, "machine-")
+	secGroup     = utils.RandomString(10, "sg-")
+	vpcName      = utils.RandomString(10, "vpc-")
+	subnetName   = utils.RandomString(15, "subnet-")
+	instanceName = utils.RandomString(15, "machine-")
 )
 
 var defaultFlags = map[string]interface{}{
@@ -194,7 +195,7 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	preDriver, err := defaultDriver()
 	require.NoError(t, err)
 	require.NoError(t, preDriver.initCompute())
-	newSG := services.RandomString(10, "nsg-")
+	newSG := utils.RandomString(10, "nsg-")
 	sg, err := preDriver.client.CreateSecurityGroup(newSG, services.PortRange{From: 24})
 	assert.NoError(t, err)
 	defer func() {
@@ -324,8 +325,8 @@ func TestDriver_CreateWithAKSK(t *testing.T) {
 }
 
 func TestDriver_SetConfigFromFlagsDeprecated(t *testing.T) {
-	az := services.RandomString(5, "")
-	eipType := services.RandomString(5, "")
+	az := utils.RandomString(5, "")
+	eipType := utils.RandomString(5, "")
 
 	driverDeprecated := NewDriver(instanceName, "path")
 	flagsD := &drivers.CheckDriverOptions{

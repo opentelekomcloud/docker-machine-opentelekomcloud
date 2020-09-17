@@ -14,10 +14,10 @@ import (
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/huaweicloud/golangsdk"
-	"github.com/huaweicloud/golangsdk/openstack/compute/v2/servers"
 	"github.com/opentelekomcloud-infra/crutch-house/clientconfig"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
+	"github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/servers"
 )
 
 const (
@@ -909,7 +909,7 @@ func (d *Driver) initNetwork() error {
 	if err := d.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
-	if err := d.client.InitNetwork(); err != nil {
+	if err := d.client.InitVPC(); err != nil {
 		return fmt.Errorf("failed to initialize VPCv1 service: %s", logHttp500(err))
 	}
 	return nil
