@@ -17,7 +17,7 @@ import (
 	"github.com/opentelekomcloud-infra/crutch-house/clientconfig"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/opentelekomcloud/gophertelekomcloud"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/servers"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 )
 
 const (
@@ -381,47 +381,55 @@ func (d *Driver) createInstance() error {
 	if err := d.initCompute(); err != nil {
 		return err
 	}
-	secGroups := d.SecurityGroupIDs
+	var secGroups []cloudservers.SecurityGroup
+	for _, sgID := range d.SecurityGroupIDs {
+		secGroups = append(secGroups, cloudservers.SecurityGroup{ID: sgID})
+	}
 	if d.ManagedSecurityGroupID != "" {
-		secGroups = append(secGroups, d.ManagedSecurityGroupID)
+		secGroups = append(secGroups, cloudservers.SecurityGroup{ID: d.ManagedSecurityGroupID})
 	}
 	if d.K8sSecurityGroupID != "" {
-		secGroups = append(secGroups, d.K8sSecurityGroupID)
+		secGroups = append(secGroups, cloudservers.SecurityGroup{ID: d.K8sSecurityGroupID})
 	}
 
-	serverOpts := &services.ExtendedServerOpts{
-		CreateOpts: &servers.CreateOpts{
-			Name:             d.MachineName,
-			FlavorRef:        d.FlavorID,
-			SecurityGroups:   secGroups,
-			AvailabilityZone: d.AvailabilityZone,
-		},
-		SubnetID:      d.SubnetID.Value,
-		KeyPairName:   d.KeyPairName.Value,
-		DiskOpts:      d.RootVolumeOpts,
-		ServerGroupID: d.ServerGroupID,
-	}
-
-	if err := d.getUserData(); err != nil {
-		return err
-	}
-	serverOpts.UserData = d.UserData
-
-	instance, err := d.client.CreateInstance(serverOpts)
+	imageRef, err := d.client.FindImage(d.ImageName)
 	if err != nil {
-		return fmt.Errorf("failed to create compute v2 instance: %s", logHttp500(err))
+		return fmt.Errorf("failed to find image: %s", imageRef)
 	}
-	d.InstanceID = instance.ID
+	opts := cloudservers.CreateOpts{
+		ImageRef:  imageRef,
+		FlavorRef: d.FlavorID,
+		Name:      d.MachineName,
+		UserData:  d.UserData,
+		AdminPass: d.Password,
+		KeyName:   d.KeyPairName.Value,
+		VpcId:     d.VpcID.Value,
+		Nics: []cloudservers.Nic{
+			{SubnetId: d.SubnetID.Value},
+		},
+		Count: 1,
+		RootVolume: cloudservers.RootVolume{
+			VolumeType: d.RootVolumeOpts.Type,
+			Size:       d.RootVolumeOpts.Size,
+		},
+		SecurityGroups:   secGroups,
+		AvailabilityZone: d.AvailabilityZone,
+		SchedulerHints: &cloudservers.SchedulerHints{
+			Group: d.ServerGroupID,
+		},
+		Tags: d.Tags,
+	}
 
-	if len(d.Tags) > 0 {
-		if err := d.client.AddTags(d.InstanceID, d.Tags); err != nil {
-			return fmt.Errorf("failed to add instance tags: %s", logHttp500(err))
-		}
+	id, err := d.client.CreateECSInstance(opts)
+	if err != nil {
+		return fmt.Errorf("failed to create compute v1 instance: %s", logHttp500(err))
 	}
+	d.InstanceID = id
 
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
 		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
 	}
+
 	return nil
 }
 
@@ -720,7 +728,7 @@ func (d *Driver) GetURL() (string, error) {
 }
 
 func (d *Driver) GetState() (state.State, error) {
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return state.None, err
 	}
 	instance, err := d.client.GetInstanceStatus(d.InstanceID)
@@ -744,7 +752,7 @@ func (d *Driver) GetState() (state.State, error) {
 }
 
 func (d *Driver) Start() error {
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.StartInstance(d.InstanceID); err != nil {
@@ -757,7 +765,7 @@ func (d *Driver) Start() error {
 }
 
 func (d *Driver) Stop() error {
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.StopInstance(d.InstanceID); err != nil {
@@ -774,7 +782,7 @@ func (d *Driver) Kill() error {
 }
 
 func (d *Driver) deleteInstance() error {
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
@@ -828,7 +836,7 @@ func (d *Driver) deleteVPC() error {
 }
 
 func (d *Driver) deleteSecGroups() error {
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	for _, id := range []string{d.ManagedSecurityGroupID, d.K8sSecurityGroupID} {
@@ -896,10 +904,27 @@ func NewDriver(hostName, storePath string) *Driver {
 }
 
 func (d *Driver) initCompute() error {
+	if err := d.initComputeV1(); err != nil {
+		return err
+	}
+	return d.initComputeV2()
+}
+
+func (d *Driver) initComputeV2() error {
 	if err := d.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitCompute(); err != nil {
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
+	}
+	return nil
+}
+
+func (d *Driver) initComputeV1() error {
+	if err := d.Authenticate(); err != nil {
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
+	}
+	if err := d.client.InitECS(); err != nil {
 		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
 	}
 	return nil
@@ -917,7 +942,7 @@ func (d *Driver) initNetwork() error {
 
 func (d *Driver) loadSSHKey() error {
 	log.Debug("Loading Key Pair", d.KeyPairName.Value)
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
@@ -961,7 +986,7 @@ func (d *Driver) createSSHKey() error {
 		return fmt.Errorf("failed to read public key file: %s", err)
 	}
 	d.KeyPairName = managedSting{d.KeyPairName.Value, true}
-	if err := d.initCompute(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if _, err := d.createKeyPair(publicKey); err != nil {
