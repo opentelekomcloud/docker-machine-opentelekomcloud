@@ -909,7 +909,7 @@ func (d *Driver) initNetwork() error {
 	if err := d.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
-	if err := d.client.InitNetwork(); err != nil {
+	if err := d.client.InitVPC(); err != nil {
 		return fmt.Errorf("failed to initialize VPCv1 service: %s", logHttp500(err))
 	}
 	return nil
