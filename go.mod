@@ -10,8 +10,9 @@ require (
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/machine v0.16.2
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/huaweicloud/golangsdk v0.0.0-20200914125232-fb334938cae6
-	github.com/opentelekomcloud-infra/crutch-house v0.2.1
+	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
+	github.com/opentelekomcloud-infra/crutch-house v0.2.2
+	github.com/opentelekomcloud/gophertelekomcloud v0.0.1
 	github.com/sirupsen/logrus v1.5.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/sys v0.0.0-20200917073148-efd3b9a0ff20 // indirect
