@@ -227,8 +227,8 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 		sgs = append(sgs, sgName)
 	}
 
-	assert.Contains(t, sgs, driver.SecurityGroups[0])
 	assert.Contains(t, sgs, driver.ManagedSecurityGroup)
+	assert.Contains(t, sgs, driver.SecurityGroups[0])
 	assert.NoError(t, driver.Remove())
 
 }
@@ -260,6 +260,11 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 	kpName := "dmd-kp"
 	keyPath := "oijugrehuilg_rsa"
 	require.NoError(t, ssh.GenerateSSHKey(keyPath))
+	pubKeyPath := fmt.Sprintf("%s.pub", keyPath)
+	defer func() {
+		_ = os.Remove(keyPath)
+		_ = os.Remove(pubKeyPath)
+	}()
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
@@ -272,7 +277,7 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, driver.client.InitCompute())
-	fData, err := ioutil.ReadFile(fmt.Sprintf("%s.pub", keyPath))
+	fData, err := ioutil.ReadFile(pubKeyPath)
 	require.NoError(t, err)
 
 	_, err = driver.client.CreateKeyPair(kpName, string(fData))
