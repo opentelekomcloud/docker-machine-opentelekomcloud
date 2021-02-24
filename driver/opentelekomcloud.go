@@ -14,7 +14,6 @@ import (
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud-infra/crutch-house/clientconfig"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
@@ -26,7 +25,7 @@ const (
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-03"
 	defaultFlavor        = "s2.large.2"
-	defaultImage         = "Standard_Ubuntu_18.04_latest"
+	defaultImage         = "Standard_Ubuntu_20.04_latest"
 	defaultSSHUser       = "ubuntu"
 	defaultSSHPort       = 22
 	defaultRegion        = "eu-de"
@@ -269,24 +268,7 @@ func (d *Driver) Authenticate() error {
 	if d.client != nil {
 		return nil
 	}
-	opts := &clientconfig.ClientOpts{
-		Cloud:        d.Cloud,
-		RegionName:   d.Region,
-		EndpointType: d.EndpointType,
-		AuthInfo: &clientconfig.AuthInfo{
-			AuthURL:     d.AuthURL,
-			Username:    d.Username,
-			Password:    d.Password,
-			ProjectName: d.ProjectName,
-			ProjectID:   d.ProjectID,
-			DomainName:  d.DomainName,
-			DomainID:    d.DomainID,
-			AccessKey:   d.AccessKey,
-			SecretKey:   d.SecretKey,
-			Token:       d.Token,
-		},
-	}
-	d.client = services.NewClient(opts)
+	d.client = services.NewClient("OS_")
 	if err := d.client.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate the client: %s", logHttp500(err))
 	}
@@ -420,7 +402,7 @@ func (d *Driver) createInstance() error {
 		Tags: d.Tags,
 	}
 
-	id, err := d.client.CreateECSInstance(opts)
+	id, err := d.client.CreateECSInstance(opts, 600)
 	if err != nil {
 		return fmt.Errorf("failed to create compute v1 instance: %s", logHttp500(err))
 	}
