@@ -44,7 +44,7 @@ builds:
         goarch: arm
       - goos: windows
         goarch: arm
-    binary: '{{ .ProjectName }}'
+    binary: '{{ .ProjectName }}_v{{ .Version }}'  # this `v` is absolutely required - in CI `v` is stripped for some reason
 archives:
   - format: tar.gz
     name_template: '{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}'
