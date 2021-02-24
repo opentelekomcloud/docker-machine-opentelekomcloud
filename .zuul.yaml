@@ -7,13 +7,13 @@
       jobs:
         - golangci-lint
         - golang-make-vet
-        - goreleaser-build
+#        - goreleaser-build
     gate:
       jobs:
         - golangci-lint
         - golang-make-vet
         - golang-make-functional
-        - goreleaser-build
-    tag:
-      jobs:
-        - release-goreleaser
+#        - goreleaser-build
+#    tag:
+#      jobs:
+#        - release-goreleaser
