@@ -7,12 +7,12 @@
       jobs:
         - golangci-lint
         - golang-make-vet
-        - goreleaser-build
+        - goreleaser-build:
             nodeset: fedora-32-large
     gate:
       jobs:
         - golangci-lint
         - golang-make-vet
         - golang-make-functional
-        - goreleaser-build
+        - goreleaser-build:
             nodeset: fedora-32-large
