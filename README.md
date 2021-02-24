@@ -1,7 +1,6 @@
 # OpenTelekomCloud Docker Machine driver
-[![Build Status](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud.svg)](https://travis-ci.org/opentelekomcloud/docker-machine-opentelekomcloud)
+[![Zuul Gate](https://zuul.eco.tsi-dev.otc-service.com/api/tenant/eco/badge?project=opentelekomcloud/docker-machine-opentelekomcloud&pipeline=check&branch=master)](https://zuul.eco.tsi-dev.otc-service.com/t/eco/builds?project=opentelekomcloud%2Fdocker-machine-opentelekomcloud)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud)](https://goreportcard.com/report/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
-[![codecov](https://codecov.io/gh/opentelekomcloud/docker-machine-opentelekomcloud/branch/devel/graph/badge.svg)](https://codecov.io/gh/opentelekomcloud/docker-machine-opentelekomcloud/branch/devel)
 ![GitHub](https://img.shields.io/github/license/opentelekomcloud/docker-machine-opentelekomcloud)
 
 OpenTelekomCloud driver for docker-machine
