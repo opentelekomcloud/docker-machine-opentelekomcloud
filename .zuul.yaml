@@ -12,5 +12,9 @@
       jobs:
         - golangci-lint
         - golang-make-vet
-        - golang-make-functional
+        - golang-make-functional:
+            voting: false
         - goreleaser-build
+    tag:
+      jobs:
+        - release-goreleaser
