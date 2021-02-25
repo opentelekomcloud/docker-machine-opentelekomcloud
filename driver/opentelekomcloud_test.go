@@ -13,6 +13,7 @@ import (
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/opentelekomcloud-infra/crutch-house/utils"
 	"github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,14 +24,14 @@ var (
 	vpcName      = utils.RandomString(10, "vpc-")
 	subnetName   = utils.RandomString(15, "subnet-")
 	instanceName = utils.RandomString(15, "machine-")
+	defaultFlags = map[string]interface{}{
+		"otc-cloud":       "otc",
+		"otc-subnet-name": subnetName,
+		"otc-vpc-name":    vpcName,
+		"otc-tags":        "machine,test",
+	}
+	testEnv = openstack.NewEnv("OTC_")
 )
-
-var defaultFlags = map[string]interface{}{
-	"otc-cloud":       "otc",
-	"otc-subnet-name": subnetName,
-	"otc-vpc-name":    vpcName,
-	"otc-tags":        "machine,test",
-}
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 	driver := NewDriver(instanceName, "")
@@ -79,17 +80,37 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 }
 
 func TestDriver_Auth(t *testing.T) {
-	_, err := defaultDriver()
-	assert.NoError(t, err)
+	testFlags := map[string]map[string]interface{}{
+		"default": defaultFlags,
+		"credentis": {
+			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"otc-username":     testEnv.GetEnv("USERNAME"),
+			"otc-password":     testEnv.GetEnv("PASSWORD"),
+		},
+		"ak/sk": {
+			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
+			"otc-domain-name":    testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name":   testEnv.GetEnv("PROJECT_NAME"),
+		},
+	}
+	for name, flags := range testFlags {
+		t.Run(name, func(sub *testing.T) {
+			_, err := newDriverFromFlags(flags)
+			assert.NoError(sub, err)
+		})
+	}
+
 }
 
 func TestDriver_AuthCreds(t *testing.T) {
 	_, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-domain-name":  os.Getenv("OTC_DOMAIN_NAME"),
-			"otc-project-name": os.Getenv("OTC_PROJECT_NAME"),
-			"otc-username":     os.Getenv("OTC_USERNAME"),
-			"otc-password":     os.Getenv("OTC_PASSWORD"),
+			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"otc-username":     testEnv.GetEnv("USERNAME"),
+			"otc-password":     testEnv.GetEnv("PASSWORD"),
 		})
 	assert.NoError(t, err)
 }
@@ -97,22 +118,38 @@ func TestDriver_AuthCreds(t *testing.T) {
 func TestDriver_AuthAKSK(t *testing.T) {
 	_, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-access-key-id":  os.Getenv("OTC_ACCESS_KEY_ID"),
-			"otc-access-key-key": os.Getenv("OTC_ACCESS_KEY_SECRET"),
+			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
 		})
 	assert.NoError(t, err)
 }
 
 func TestDriver_Create(t *testing.T) {
-	driver, err := defaultDriver()
-	require.NoError(t, err)
-	require.NoError(t, cleanupResources(driver))
-	defer func() {
-		assert.NoError(t, cleanupResources(driver))
-	}()
-	require.NoError(t, driver.Authenticate())
-	require.NoError(t, driver.Create())
-	assert.NoError(t, driver.Remove())
+	testFlags := map[string]map[string]interface{}{
+		"default": defaultFlags,
+		"ak/sk": {
+			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
+			"otc-domain-name":    testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name":   testEnv.GetEnv("PROJECT_NAME"),
+			"otc-subnet-name":    defaultFlags["otc-subnet-name"],
+			"otc-vpc-name":       defaultFlags["otc-vpc-name"],
+			"otc-tags":           "machine,test",
+		},
+	}
+
+	for name, flags := range testFlags {
+		t.Run(name, func(sub *testing.T) {
+			driver, err := newDriverFromFlags(flags)
+			require.NoError(sub, err)
+			defer func() {
+				assert.NoError(sub, cleanupResources(driver))
+			}()
+			require.NoError(sub, driver.Authenticate())
+			require.NoError(sub, driver.Create())
+			assert.NoError(sub, driver.Remove())
+		})
+	}
 }
 
 func TestDriver_Start(t *testing.T) {
@@ -308,24 +345,6 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, status.Addresses, 1)
 	assert.NotEmpty(t, driver.FloatingIP)
-	assert.NoError(t, driver.Remove())
-}
-
-func TestDriver_CreateWithAKSK(t *testing.T) {
-	driver, err := newDriverFromFlags(
-		map[string]interface{}{
-			"otc-access-key-id":  os.Getenv("OTC_ACCESS_KEY_ID"),
-			"otc-access-key-key": os.Getenv("OTC_ACCESS_KEY_SECRET"),
-			"otc-domain-name":    os.Getenv("OTC_DOMAIN_NAME"),
-			"otc-project-name":   os.Getenv("OTC_PROJECT_NAME"),
-		})
-	require.NoError(t, err)
-	require.NoError(t, driver.initCompute())
-	require.NoError(t, driver.initNetwork())
-	defer func() {
-		assert.NoError(t, cleanupResources(driver))
-	}()
-	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
 }
 
