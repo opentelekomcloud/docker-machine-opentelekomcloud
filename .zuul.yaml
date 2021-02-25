@@ -1,0 +1,20 @@
+---
+- project:
+    merge-mode: squash-merge
+    vars:
+      functest_project_name: "eu-de_zuul_go"
+    check:
+      jobs:
+        - golangci-lint
+        - golang-make-vet
+        - goreleaser-build
+    gate:
+      jobs:
+        - golangci-lint
+        - golang-make-vet
+        - golang-make-functional:
+            voting: false
+        - goreleaser-build
+    tag:
+      jobs:
+        - release-goreleaser
