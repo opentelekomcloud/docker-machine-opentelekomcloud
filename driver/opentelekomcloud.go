@@ -26,9 +26,9 @@ const (
 	dockerPort           = 2376
 	driverName           = "otc"
 	defaultSecurityGroup = "docker-machine-grp"
-	defaultAZ            = "eu-de-03"
+	defaultAZ            = "eu-de-01"
 	defaultFlavor        = "s2.large.2"
-	defaultImage         = "Standard_Ubuntu_18.04_latest"
+	defaultImage         = "Standard_Ubuntu_20.04_latest"
 	defaultSSHUser       = "ubuntu"
 	defaultSSHPort       = 22
 	defaultRegion        = "eu-de"
@@ -36,20 +36,7 @@ const (
 	defaultVpcName       = "vpc-docker-machine"
 	defaultSubnetName    = "subnet-docker-machine"
 	defaultVolumeSize    = 40
-	defaultVolumeType    = "SATA"
-	k8sGroupName         = "sg-k8s"
-)
-
-var (
-	// https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#check-required-ports
-	k8sPorts = []services.PortRange{
-		// control-plane node(s)
-		{From: 6443},
-		{From: 2379, To: 2380},
-		{From: 10250, To: 10252},
-		// worker node(s)
-		{From: 30000, To: 32767},
-	}
+	defaultVolumeType    = "SSD"
 )
 
 type managedSting struct {
@@ -60,49 +47,48 @@ type managedSting struct {
 // Driver for docker-machine
 type Driver struct {
 	*drivers.BaseDriver
-	Cloud                  string             `json:"cloud,omitempty"`
-	AuthURL                string             `json:"auth_url,omitempty"`
-	CACert                 string             `json:"ca_cert,omitempty"`
-	ValidateCert           bool               `json:"validate_cert"`
-	DomainID               string             `json:"domain_id,omitempty"`
-	DomainName             string             `json:"domain_name,omitempty"`
-	Username               string             `json:"username,omitempty"`
-	Password               string             `json:"password,omitempty"`
-	ProjectName            string             `json:"project_name,omitempty"`
-	ProjectID              string             `json:"project_id,omitempty"`
-	Region                 string             `json:"region,omitempty"`
-	AccessKey              string             `json:"access_key,omitempty"`
-	SecretKey              string             `json:"secret_key,omitempty"`
-	AvailabilityZone       string             `json:"-"`
-	EndpointType           string             `json:"endpoint_type,omitempty"`
-	InstanceID             string             `json:"instance_id"`
-	FlavorName             string             `json:"-"`
-	FlavorID               string             `json:"-"`
-	ImageName              string             `json:"-"`
-	KeyPairName            managedSting       `json:"key_pair"`
-	VpcName                string             `json:"-"`
-	VpcID                  managedSting       `json:"vpc_id"`
-	SubnetName             string             `json:"-"`
-	SubnetID               managedSting       `json:"subnet_id"`
-	PrivateKeyFile         string             `json:"private_key"`
-	SecurityGroups         []string           `json:"-"`
-	SecurityGroupIDs       []string           `json:"-"`
-	ServerGroup            string             `json:"-"`
-	ServerGroupID          string             `json:"-"`
-	ManagedSecurityGroup   string             `json:"-"`
-	ManagedSecurityGroupID string             `json:"managed_security_group,omitempty"`
-	K8sSecurityGroup       string             `json:"-"`
-	K8sSecurityGroupID     string             `json:"k8s_security_group,omitempty"`
-	FloatingIP             managedSting       `json:"floating_ip"`
-	Token                  string             `json:"token,omitempty"`
-	RootVolumeOpts         *services.DiskOpts `json:"-"`
-	UserDataFile           string             `json:"-"`
-	UserData               []byte             `json:"-"`
-	Tags                   []string           `json:"-"`
-	IPVersion              int                `json:"-"`
+	Cloud                  string       `json:"cloud,omitempty"`
+	AuthURL                string       `json:"auth_url,omitempty"`
+	CACert                 string       `json:"ca_cert,omitempty"`
+	ValidateCert           bool         `json:"validate_cert"`
+	DomainID               string       `json:"domain_id,omitempty"`
+	DomainName             string       `json:"domain_name,omitempty"`
+	Username               string       `json:"username,omitempty"`
+	Password               string       `json:"password,omitempty"`
+	ProjectName            string       `json:"project_name,omitempty"`
+	ProjectID              string       `json:"project_id,omitempty"`
+	Region                 string       `json:"region,omitempty"`
+	AccessKey              string       `json:"access_key,omitempty"`
+	SecretKey              string       `json:"secret_key,omitempty"`
+	AvailabilityZone       string       `json:"-"`
+	EndpointType           string       `json:"endpoint_type,omitempty"`
+	InstanceID             string       `json:"instance_id"`
+	FlavorName             string       `json:"-"`
+	FlavorID               string       `json:"-"`
+	ImageName              string       `json:"-"`
+	KeyPairName            managedSting `json:"key_pair"`
+	VpcName                string       `json:"-"`
+	VpcID                  managedSting `json:"vpc_id"`
+	SubnetName             string       `json:"-"`
+	SubnetID               managedSting `json:"subnet_id"`
+	PrivateKeyFile         string       `json:"private_key"`
+	SecurityGroups         []string     `json:"-"`
+	SecurityGroupIDs       []string     `json:"-"`
+	ServerGroup            string       `json:"-"`
+	ServerGroupID          string       `json:"-"`
+	ManagedSecurityGroup   string       `json:"-"`
+	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
+	FloatingIP             managedSting `json:"floating_ip"`
+	Token                  string       `json:"token,omitempty"`
+	UserDataFile           string       `json:"-"`
+	UserData               []byte       `json:"-"`
+	Tags                   []string     `json:"-"`
+	IPVersion              int          `json:"-"`
 	skipEIPCreation        bool
-	eipConfig              *services.ElasticIPOpts
-	client                 services.Client
+
+	RootVolumeOpts *services.DiskOpts `json:"-"`
+	eipConfig      *services.ElasticIPOpts
+	client         services.Client
 }
 
 // logHttp500 appends error message with response 500 body
@@ -146,17 +132,6 @@ func (d *Driver) createSubnet() error {
 	if err := d.client.WaitForSubnetStatus(d.SubnetID.Value, "ACTIVE"); err != nil {
 		return fmt.Errorf("fail waiting for subnet status `ACTIVE`: %s", logHttp500(err))
 	}
-	return nil
-}
-func (d *Driver) createK8sGroup() error {
-	if d.K8sSecurityGroupID != "" || d.K8sSecurityGroup == "" {
-		return nil
-	}
-	sg, err := d.client.CreateSecurityGroup(d.K8sSecurityGroup, k8sPorts...)
-	if err != nil {
-		return fmt.Errorf("fail creating k8s security group: %s", logHttp500(err))
-	}
-	d.K8sSecurityGroupID = sg.ID
 	return nil
 }
 
@@ -260,9 +235,6 @@ func (d *Driver) createResources() error {
 	if err := d.createDefaultGroup(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.createK8sGroup(); err != nil {
-		return resCreateErr(err)
-	}
 
 	return nil
 }
@@ -288,6 +260,12 @@ func (d *Driver) Authenticate() error {
 			Token:       d.Token,
 		},
 	}
+	// we don't need domain for project-level AK/SK auth
+	if d.AccessKey != "" {
+		cloud.AuthInfo.DomainName = ""
+		cloud.AuthInfo.DomainID = ""
+	}
+
 	defaultCloud, err := openstack.NewEnv("OS_").Cloud(d.Cloud)
 	if err != nil {
 		return fmt.Errorf("failed to load default cloud configuration")
@@ -400,9 +378,6 @@ func (d *Driver) createInstance() error {
 	if d.ManagedSecurityGroupID != "" {
 		secGroups = append(secGroups, cloudservers.SecurityGroup{ID: d.ManagedSecurityGroupID})
 	}
-	if d.K8sSecurityGroupID != "" {
-		secGroups = append(secGroups, cloudservers.SecurityGroup{ID: d.K8sSecurityGroupID})
-	}
 
 	imageRef, err := d.client.FindImage(d.ImageName)
 	if err != nil {
@@ -455,7 +430,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-cloud",
 			EnvVar: "OS_CLOUD",
 			Usage:  "Name of cloud in `clouds.yaml` file",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-auth-url",
@@ -467,31 +441,26 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-cacert",
 			EnvVar: "OS_CACERT",
 			Usage:  "CA certificate bundle to verify against",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-domain-id",
 			EnvVar: "OS_DOMAIN_ID",
 			Usage:  "OpenTelekomCloud domain ID",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-domain-name",
 			EnvVar: "OS_DOMAIN_NAME",
 			Usage:  "OpenTelekomCloud domain name",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-username",
 			EnvVar: "OS_USERNAME",
 			Usage:  "OpenTelekomCloud username",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-password",
 			EnvVar: "OS_PASSWORD",
 			Usage:  "OpenTelekomCloud password",
-			Value:  "",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-project-name",
@@ -502,11 +471,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-project-id",
 			EnvVar: "OS_PROJECT_ID",
 			Usage:  "OpenTelekomCloud project ID",
-		},
-		mcnflag.StringFlag{
-			Name:   "otc-tenant-id",
-			Usage:  "OpenTelekomCloud project ID. DEPRECATED: use -otc-project-id instead",
-			EnvVar: "TENANT_ID",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-region",
@@ -531,11 +495,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultAZ,
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-available-zone",
-			EnvVar: "AVAILABLE_ZONE",
-			Usage:  "OpenTelekomCloud availability zone. DEPRECATED: use -otc-availability-zone instead",
-		},
-		mcnflag.StringFlag{
 			Name:   "otc-flavor-id",
 			EnvVar: "FLAVOR_ID",
 			Usage:  "OpenTelekomCloud flavor id to use for the instance",
@@ -548,7 +507,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-image-id",
-			EnvVar: "IMAGE_ID",
+			EnvVar: "OS_IMAGE_ID",
 			Usage:  "OpenTelekomCloud image id to use for the instance",
 		},
 		mcnflag.StringFlag{
@@ -564,7 +523,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-vpc-id",
-			EnvVar: "VPC_ID",
+			EnvVar: "OS_VPC_ID",
 			Usage:  "OpenTelekomCloud VPC id the machine will be connected on",
 		},
 		mcnflag.StringFlag{
@@ -575,12 +534,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-subnet-id",
-			EnvVar: "SUBNET_ID",
+			EnvVar: "OS_NETWORK_ID",
 			Usage:  "OpenTelekomCloud subnet id the machine will be connected on",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-subnet-name",
-			EnvVar: "OS_SUBNET_NAME",
+			EnvVar: "OS_NETWORK_NAME",
 			Usage:  "OpenTelekomCloud subnet name the machine will be connected on",
 			Value:  defaultSubnetName,
 		},
@@ -619,28 +578,17 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "OpenTelekomCloud bandwidth type",
 			Value:  "5_bgp",
 		},
-		mcnflag.StringFlag{
-			Name:   "otc-elastic-ip-type",
-			EnvVar: "ELASTICIP_TYPE",
-			Usage:  "OpenTelekomCloud bandwidth type. DEPRECATED! Use -otc-floating-ip-type instead",
-		},
 		mcnflag.IntFlag{
 			Name:   "otc-bandwidth-size",
-			EnvVar: "BANDWIDTH_SIZE",
+			EnvVar: "OS_BANDWIDTH_SIZE",
 			Usage:  "OpenTelekomCloud bandwidth size",
 			Value:  100,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-bandwidth-type",
-			EnvVar: "BANDWIDTH_TYPE",
+			EnvVar: "OS_BANDWIDTH_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth share type",
 			Value:  "PER",
-		},
-		mcnflag.IntFlag{
-			Name:   "otc-elastic-ip",
-			EnvVar: "ELASTIC_IP",
-			Usage:  "If set to 0, elastic IP won't be created. DEPRECATED: use -otc-skip-ip instead",
-			Value:  1,
 		},
 		mcnflag.BoolFlag{
 			Name:  "otc-skip-ip",
@@ -654,7 +602,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-ssh-user",
-			EnvVar: "SSH_USER",
+			EnvVar: "OS_SSH_USER",
 			Usage:  "Machine SSH username",
 			Value:  defaultSSHUser,
 		},
@@ -674,10 +622,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:  "otc-skip-default-sg",
 			Usage: "Don't create default security group",
 		},
-		mcnflag.BoolFlag{
-			Name:  "otc-k8s-group",
-			Usage: "Create security group with k8s ports allowed",
-		},
 		mcnflag.StringFlag{
 			Name:   "otc-server-group",
 			EnvVar: "OS_SERVER_GROUP",
@@ -690,20 +634,20 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		},
 		mcnflag.IntFlag{
 			Name:   "otc-root-volume-size",
-			EnvVar: "ROOT_VOLUME_SIZEROOT_VOLUME_SIZE",
+			EnvVar: "OS_ROOT_VOLUME_SIZE",
 			Usage:  "Set volume size of root partition",
 			Value:  defaultVolumeSize,
+		},
+		mcnflag.StringFlag{
+			Name:   "otc-root-volume-type",
+			EnvVar: "OS_ROOT_VOLUME_TYPE",
+			Usage:  "Set volume type of root partition (one of SATA, SAS, SSD)",
+			Value:  defaultVolumeType,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-tags",
 			EnvVar: "OS_TAGS",
 			Usage:  "Comma-separated list of instance tags",
-		},
-		mcnflag.StringFlag{
-			Name:   "otc-root-volume-type",
-			EnvVar: "ROOT_VOLUME_TYPE",
-			Usage:  "Set volume type of root partition (one of SATA, SAS, SSD)",
-			Value:  defaultVolumeType,
 		},
 	}
 }
@@ -851,16 +795,15 @@ func (d *Driver) deleteSecGroups() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
 	}
-	for _, id := range []string{d.ManagedSecurityGroupID, d.K8sSecurityGroupID} {
-		if id == "" {
-			continue
-		}
-		if err := d.client.DeleteSecurityGroup(id); err != nil {
-			return fmt.Errorf("failed to delete security group: %s", logHttp500(err))
-		}
-		if err := d.client.WaitForGroupDeleted(id); err != nil {
-			return fmt.Errorf("failed to wait for security group status after deletion: %s", logHttp500(err))
-		}
+	id := d.ManagedSecurityGroupID
+	if id == "" {
+		return nil
+	}
+	if err := d.client.DeleteSecurityGroup(id); err != nil {
+		return fmt.Errorf("failed to delete security group: %s", logHttp500(err))
+	}
+	if err := d.client.WaitForGroupDeleted(id); err != nil {
+		return fmt.Errorf("failed to wait for security group status after deletion: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -1078,16 +1021,6 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 
 	if !flags.Bool("otc-skip-default-sg") {
 		d.ManagedSecurityGroup = defaultSecurityGroup
-	}
-
-	if flags.Bool("otc-k8s-group") {
-		d.K8sSecurityGroup = k8sGroupName
-	}
-
-	// we need to unset domain ID/name in case of AK/SK auth
-	if d.AccessKey != "" {
-		d.DomainID = ""
-		d.DomainName = ""
 	}
 
 	d.SetSwarmConfigFromFlags(flags)
