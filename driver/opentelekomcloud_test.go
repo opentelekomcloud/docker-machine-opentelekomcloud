@@ -210,9 +210,6 @@ func cleanupResources(driver *Driver) error {
 	if driver.ManagedSecurityGroupID != "" {
 		_ = driver.client.DeleteSecurityGroup(driver.ManagedSecurityGroupID)
 	}
-	if driver.K8sSecurityGroupID != "" {
-		_ = driver.client.DeleteSecurityGroup(driver.K8sSecurityGroupID)
-	}
 	vpcID, _ := driver.client.FindVPC(vpcName)
 	if vpcID == "" {
 		return nil
@@ -270,29 +267,6 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 
 }
 
-func TestDriver_CreateWithK8sGroup(t *testing.T) {
-	driver, err := newDriverFromFlags(
-		map[string]interface{}{
-			"otc-cloud":       "otc",
-			"otc-subnet-name": subnetName,
-			"otc-vpc-name":    vpcName,
-			"otc-k8s-group":   true,
-		})
-	require.NoError(t, err)
-	assert.NoError(t, driver.Create())
-	instance, err := driver.client.GetInstanceStatus(driver.InstanceID)
-	assert.NoError(t, err)
-	assert.Len(t, instance.SecurityGroups, 2)
-	var sgs []string
-	for _, sg := range instance.SecurityGroups {
-		sgName := sg["name"].(string)
-		sgs = append(sgs, sgName)
-	}
-
-	assert.Contains(t, sgs, driver.K8sSecurityGroup)
-	assert.NoError(t, driver.Remove())
-}
-
 func TestDriver_ExistingSSHKey(t *testing.T) {
 	kpName := "dmd-kp"
 	keyPath := "oijugrehuilg_rsa"
@@ -346,42 +320,6 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 	assert.Len(t, status.Addresses, 1)
 	assert.NotEmpty(t, driver.FloatingIP)
 	assert.NoError(t, driver.Remove())
-}
-
-func TestDriver_SetConfigFromFlagsDeprecated(t *testing.T) {
-	az := utils.RandomString(5, "")
-	eipType := utils.RandomString(5, "")
-
-	driverDeprecated := NewDriver(instanceName, "path")
-	flagsD := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"otc-cloud":           "otc",
-			"otc-available-zone":  az,
-			"otc-elastic-ip-type": eipType,
-			"otc-elastic-ip":      0,
-		},
-		CreateFlags: driverDeprecated.GetCreateFlags(),
-	}
-	assert.NoError(t, driverDeprecated.SetConfigFromFlags(flagsD))
-
-	driverNew := NewDriver(instanceName, "path")
-	flagsN := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"otc-cloud":             "otc",
-			"otc-availability-zone": az,
-			"otc-floating-ip-type":  eipType,
-			"otc-skip-ip":           true,
-		},
-		CreateFlags: driverNew.GetCreateFlags(),
-	}
-	assert.NoError(t, driverNew.SetConfigFromFlags(flagsN))
-
-	assert.Equal(t, driverNew.AvailabilityZone, driverDeprecated.AvailabilityZone)
-	assert.Equal(t, az, driverNew.AvailabilityZone)
-	assert.Equal(t, driverDeprecated.eipConfig.IPType, driverNew.eipConfig.IPType)
-	assert.Equal(t, eipType, driverNew.eipConfig.IPType)
-	assert.Equal(t, driverNew.skipEIPCreation, driverDeprecated.skipEIPCreation)
-	assert.Equal(t, true, driverNew.skipEIPCreation)
 }
 
 // This test won't check anything really, it exists only for debug purposes
@@ -473,5 +411,5 @@ func TestDriver_FaultyRemove(t *testing.T) {
 	driver.VpcID.DriverManaged = true
 	driver.KeyPairName.DriverManaged = true
 	err := multierror.Append(driver.Remove())
-	assert.Equal(t, 4, err.Len())
+	assert.Equal(t, 4, err.Len(), "invalid number of errors: %s", err)
 }
