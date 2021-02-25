@@ -167,10 +167,10 @@ func TestDriver_Start(t *testing.T) {
 }
 
 func cleanupResources(driver *Driver) error {
-	if err := driver.initCompute(); err != nil {
+	if err := driver.InitCompute(); err != nil {
 		return err
 	}
-	if err := driver.initNetwork(); err != nil {
+	if err := driver.InitNetwork(); err != nil {
 		return err
 	}
 	instanceID, err := driver.client.FindInstance(instanceName)
@@ -184,7 +184,7 @@ func cleanupResources(driver *Driver) error {
 	}
 	if instanceID != "" {
 		driver.InstanceID = instanceID
-		err := driver.deleteInstance()
+		err := driver.DeleteInstance()
 		if err != nil {
 			return err
 		}
@@ -218,17 +218,17 @@ func cleanupResources(driver *Driver) error {
 	subnetID, _ := driver.client.FindSubnet(vpcID, subnetName)
 	if subnetID != "" {
 		driver.SubnetID = managedSting{Value: subnetID, DriverManaged: true}
-		if err := driver.deleteSubnet(); err != nil {
+		if err := driver.DeleteSubnet(); err != nil {
 			return err
 		}
 	}
-	return driver.deleteVPC()
+	return driver.DeleteVPC()
 }
 
 func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	preDriver, err := defaultDriver()
 	require.NoError(t, err)
-	require.NoError(t, preDriver.initCompute())
+	require.NoError(t, preDriver.InitCompute())
 	newSG := utils.RandomString(10, "nsg-")
 	sg, err := preDriver.client.CreateSecurityGroup(newSG, services.PortRange{From: 24})
 	assert.NoError(t, err)
@@ -244,8 +244,8 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 			"otc-sec-groups":  sg.Name,
 		})
 	require.NoError(t, err)
-	require.NoError(t, driver.initCompute())
-	require.NoError(t, driver.initNetwork())
+	require.NoError(t, driver.InitCompute())
+	require.NoError(t, driver.InitNetwork())
 	defer func() {
 		assert.NoError(t, cleanupResources(driver))
 	}()
@@ -309,8 +309,8 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 			"otc-skip-ip":     true,
 		})
 	require.NoError(t, err)
-	require.NoError(t, driver.initCompute())
-	require.NoError(t, driver.initNetwork())
+	require.NoError(t, driver.InitCompute())
+	require.NoError(t, driver.InitNetwork())
 	defer func() {
 		assert.NoError(t, cleanupResources(driver))
 	}()
@@ -337,8 +337,8 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 			"otc-user-data-file": fileName,
 		})
 	require.NoError(t, err)
-	require.NoError(t, driver.initCompute())
-	require.NoError(t, driver.initNetwork())
+	require.NoError(t, driver.InitCompute())
+	require.NoError(t, driver.InitNetwork())
 	defer func() {
 		assert.NoError(t, cleanupResources(driver))
 	}()
@@ -360,7 +360,7 @@ func TestDriver_UserDataRaw(t *testing.T) {
 			"otc-user-data-file": fileName,
 		})
 	require.NoError(t, err)
-	require.NoError(t, driverFl.getUserData())
+	require.NoError(t, driverFl.GetUserData())
 
 	driverRaw, err := newDriverFromFlags(
 		map[string]interface{}{
@@ -375,7 +375,7 @@ func TestDriver_UserDataRaw(t *testing.T) {
 func TestDriver_ResolveServerGroup(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
-	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.InitCompute())
 	group, err := driver.client.CreateServerGroup(&servergroups.CreateOpts{
 		Name:     "test-group",
 		Policies: []string{"anti-affinity"},
@@ -396,7 +396,7 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	}
 
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.NoError(t, driver.resolveIDs())
+	assert.NoError(t, driver.ResolveIDs())
 	assert.Equal(t, group.ID, driver.ServerGroupID)
 
 }
@@ -404,9 +404,9 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 func TestDriver_FaultyRemove(t *testing.T) {
 	driver, derr := defaultDriver()
 	require.NoError(t, derr)
-	require.NoError(t, driver.initCompute())
-	require.NoError(t, driver.initNetwork())
-	require.NoError(t, driver.resolveIDs())
+	require.NoError(t, driver.InitCompute())
+	require.NoError(t, driver.InitNetwork())
+	require.NoError(t, driver.ResolveIDs())
 	driver.SubnetID.DriverManaged = true
 	driver.VpcID.DriverManaged = true
 	driver.KeyPairName.DriverManaged = true
