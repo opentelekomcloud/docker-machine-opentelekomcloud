@@ -1,6 +1,7 @@
 package opentelekomcloud
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -14,10 +15,11 @@ import (
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud-infra/crutch-house/clientconfig"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/utils"
 )
 
 const (
@@ -269,11 +271,11 @@ func (d *Driver) Authenticate() error {
 	if d.client != nil {
 		return nil
 	}
-	opts := &clientconfig.ClientOpts{
+	cloud := &openstack.Cloud{
 		Cloud:        d.Cloud,
 		RegionName:   d.Region,
 		EndpointType: d.EndpointType,
-		AuthInfo: &clientconfig.AuthInfo{
+		AuthInfo: openstack.AuthInfo{
 			AuthURL:     d.AuthURL,
 			Username:    d.Username,
 			Password:    d.Password,
@@ -286,7 +288,17 @@ func (d *Driver) Authenticate() error {
 			Token:       d.Token,
 		},
 	}
-	d.client = services.NewClient(opts)
+	defaultCloud, err := openstack.NewEnv("OS_").Cloud(d.Cloud)
+	if err != nil {
+		return fmt.Errorf("failed to load default cloud configuration")
+	}
+	merged, err := mergeClouds(cloud, defaultCloud) // merge given flags with config from configuration files
+	if err != nil {
+		log.Errorf("unable to merge cloud with defaults")
+	} else {
+		cloud = merged
+	}
+	d.client = services.NewCloudClient(cloud)
 	if err := d.client.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate the client: %s", logHttp500(err))
 	}
@@ -420,7 +432,7 @@ func (d *Driver) createInstance() error {
 		Tags: d.Tags,
 	}
 
-	id, err := d.client.CreateECSInstance(opts)
+	id, err := d.client.CreateECSInstance(opts, 600)
 	if err != nil {
 		return fmt.Errorf("failed to create compute v1 instance: %s", logHttp500(err))
 	}
@@ -1072,6 +1084,12 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		d.K8sSecurityGroup = k8sGroupName
 	}
 
+	// we need to unset domain ID/name in case of AK/SK auth
+	if d.AccessKey != "" {
+		d.DomainID = ""
+		d.DomainName = ""
+	}
+
 	d.SetSwarmConfigFromFlags(flags)
 	return d.checkConfig()
 }
@@ -1092,4 +1110,37 @@ func (d *Driver) checkConfig() error {
 		return fmt.Errorf("both `-otc-user-data` and `-otc-user-data` is defined")
 	}
 	return nil
+}
+
+// mergeClouds merges two Config recursively (the AuthInfo also gets merged).
+// In case both Config define a value, the value in the 'cloud' cloud takes precedence
+func mergeClouds(cloud, fallback interface{}) (*openstack.Cloud, error) {
+	overrideJson, err := json.Marshal(fallback)
+	if err != nil {
+		return nil, err
+	}
+	cloudJson, err := json.Marshal(cloud)
+	if err != nil {
+		return nil, err
+	}
+	var fallbackInterface interface{}
+	err = json.Unmarshal(overrideJson, &fallbackInterface)
+	if err != nil {
+		return nil, err
+	}
+	var cloudInterface interface{}
+	err = json.Unmarshal(cloudJson, &cloudInterface)
+	if err != nil {
+		return nil, err
+	}
+	mergedCloud := new(openstack.Cloud)
+	mergedInterface := utils.MergeInterfaces(cloudInterface, fallbackInterface)
+	mergedJson, err := json.Marshal(mergedInterface)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(mergedJson, mergedCloud); err != nil {
+		return nil, err
+	}
+	return mergedCloud, nil
 }
