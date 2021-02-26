@@ -246,12 +246,9 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.Username = flags.String("otc-username")
 	d.Password = flags.String("otc-password")
 	d.ProjectName = flags.String("otc-project-name")
-	projectID := flags.String("otc-tenant-id")
-	if projectID == "" {
-		projectID = flags.String("otc-project-id")
-	}
-	d.ProjectID = projectID
+	d.ProjectID = flags.String("otc-project-id")
 	d.Region = flags.String("otc-region")
+	d.AvailabilityZone = flags.String("otc-availability-zone")
 	d.EndpointType = flags.String("otc-endpoint-type")
 	d.FlavorID = flags.String("otc-flavor-id")
 	d.FlavorName = flags.String("otc-flavor-name")
@@ -283,23 +280,13 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		Size:     flags.Int("otc-root-volume-size"),
 		Type:     flags.String("otc-root-volume-type"),
 	}
-	ipType := flags.String("otc-elastic-ip-type")
-	if ipType == "" {
-		ipType = flags.String("otc-floating-ip-type")
-	}
 
 	d.eipConfig = &services.ElasticIPOpts{
-		IPType:        ipType,
+		IPType:        flags.String("otc-floating-ip-type"),
 		BandwidthSize: flags.Int("otc-bandwidth-size"),
 		BandwidthType: flags.String("otc-bandwidth-type"),
 	}
-	d.skipEIPCreation = flags.Int("otc-elastic-ip") == 0 || flags.Bool("otc-skip-ip")
-
-	az := flags.String("otc-available-zone")
-	if az == "" {
-		az = flags.String("otc-availability-zone")
-	}
-	d.AvailabilityZone = az
+	d.skipEIPCreation = flags.Bool("otc-skip-ip")
 
 	if sg := flags.String("otc-sec-groups"); sg != "" {
 		d.SecurityGroups = strings.Split(sg, ",")
