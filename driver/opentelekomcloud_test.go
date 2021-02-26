@@ -82,7 +82,7 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 func TestDriver_Auth(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,
-		"credentis": {
+		"credentials": {
 			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
 			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
 			"otc-username":     testEnv.GetEnv("USERNAME"),
