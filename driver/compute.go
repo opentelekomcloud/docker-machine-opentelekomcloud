@@ -2,13 +2,14 @@ package opentelekomcloud
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strings"
+
 	"github.com/docker/machine/libmachine/log"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	"github.com/opentelekomcloud-infra/crutch-house/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
-	"io/ioutil"
-	"strings"
 )
 
 func (d *Driver) initCompute() error {

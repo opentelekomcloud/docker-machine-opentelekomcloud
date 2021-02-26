@@ -1,10 +1,11 @@
 package opentelekomcloud
 
 import (
+	"strings"
+
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
-	"strings"
 )
 
 func (d *Driver) GetCreateFlags() []mcnflag.Flag {

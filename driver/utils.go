@@ -3,14 +3,15 @@ package opentelekomcloud
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"strconv"
+
 	"github.com/docker/machine/libmachine/state"
 	"github.com/opentelekomcloud-infra/crutch-house/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/utils"
-	"io/ioutil"
-	"net"
-	"strconv"
 )
 
 const (
