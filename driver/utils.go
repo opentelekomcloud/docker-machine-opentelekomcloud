@@ -4,11 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
-	"strconv"
 
-	"github.com/docker/machine/libmachine/state"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/utils"
@@ -155,63 +151,4 @@ func (d *Driver) getUserData() error {
 	}
 	d.UserData = userData
 	return nil
-}
-
-func (d *Driver) DriverName() string {
-	return driverName
-}
-
-func (d *Driver) GetSSHHostname() (string, error) {
-	return d.GetIP()
-}
-
-func (d *Driver) GetSSHPort() (int, error) {
-	if d.SSHPort == 0 {
-		d.SSHPort = defaultSSHPort
-	}
-	return d.SSHPort, nil
-}
-
-func (d *Driver) GetSSHUsername() string {
-	if d.SSHUser == "" {
-		d.SSHUser = defaultSSHUser
-	}
-	return d.SSHUser
-}
-
-func (d *Driver) GetIP() (string, error) {
-	d.IPAddress = d.FloatingIP.Value
-	return d.BaseDriver.GetIP()
-}
-
-func (d *Driver) GetURL() (string, error) {
-	ip, err := d.GetIP()
-	if err != nil || ip == "" {
-		return "", err
-	}
-	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, strconv.Itoa(dockerPort))), nil
-}
-
-func (d *Driver) GetState() (state.State, error) {
-	if err := d.initComputeV2(); err != nil {
-		return state.None, err
-	}
-	instance, err := d.client.GetInstanceStatus(d.InstanceID)
-	if err != nil {
-		return state.None, fmt.Errorf("failed to get instance state: %s", logHttp500(err))
-	}
-	switch instance.Status {
-	case services.InstanceStatusRunning:
-		return state.Running, nil
-	case "PAUSED":
-		return state.Paused, nil
-	case services.InstanceStatusStopped:
-		return state.Stopped, nil
-	case "BUILDING":
-		return state.Starting, nil
-	case "ERROR":
-		return state.Error, nil
-	default:
-		return state.None, nil
-	}
 }
