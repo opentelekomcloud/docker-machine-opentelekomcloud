@@ -65,29 +65,29 @@ type Driver struct {
 // resCreateErr wraps errors happening in createResources
 func resCreateErr(orig error) error {
 	if orig != nil {
-		return fmt.Errorf("fail in required resource creation: %s", LogHttp500(orig))
+		return fmt.Errorf("fail in required resource creation: %s", logHttp500(orig))
 	}
 	return nil
 }
 
 func (d *Driver) createResources() error {
 	// network init
-	if err := d.InitNetwork(); err != nil {
+	if err := d.initNetwork(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.InitCompute(); err != nil {
+	if err := d.initCompute(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.ResolveIDs(); err != nil {
+	if err := d.resolveIDs(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.CreateVPC(); err != nil {
+	if err := d.createVPC(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.CreateSubnet(); err != nil {
+	if err := d.createSubnet(); err != nil {
 		return resCreateErr(err)
 	}
-	if err := d.CreateDefaultGroup(); err != nil {
+	if err := d.createDefaultGroup(); err != nil {
 		return resCreateErr(err)
 	}
 
@@ -125,7 +125,7 @@ func (d *Driver) Authenticate() error {
 	if err != nil {
 		return fmt.Errorf("failed to load default cloud configuration")
 	}
-	merged, err := MergeClouds(cloud, defaultCloud) // merge given flags with config from configuration files
+	merged, err := mergeClouds(cloud, defaultCloud) // merge given flags with config from configuration files
 	if err != nil {
 		log.Errorf("unable to merge cloud with defaults")
 	} else {
@@ -133,7 +133,7 @@ func (d *Driver) Authenticate() error {
 	}
 	d.client = services.NewCloudClient(cloud)
 	if err := d.client.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate the client: %s", LogHttp500(err))
+		return fmt.Errorf("failed to authenticate the client: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -147,7 +147,7 @@ func (d *Driver) Create() error {
 		return err
 	}
 	if d.KeyPairName.Value != "" {
-		if err := d.LoadSSHKey(); err != nil {
+		if err := d.loadSSHKey(); err != nil {
 			return err
 		}
 	} else {
@@ -155,19 +155,19 @@ func (d *Driver) Create() error {
 			fmt.Sprintf("%s-%s", d.MachineName, mcnutils.GenerateRandomID()),
 			true,
 		}
-		if err := d.CreateSSHKey(); err != nil {
+		if err := d.createSSHKey(); err != nil {
 			return err
 		}
 	}
-	if err := d.CreateInstance(); err != nil {
+	if err := d.createInstance(); err != nil {
 		return err
 	}
 	if d.skipEIPCreation {
-		if err := d.UseLocalIP(); err != nil {
+		if err := d.useLocalIP(); err != nil {
 			return err
 		}
 	} else {
-		if err := d.CreateFloatingIP(); err != nil {
+		if err := d.createFloatingIP(); err != nil {
 			return err
 		}
 	}
@@ -175,27 +175,27 @@ func (d *Driver) Create() error {
 }
 
 func (d *Driver) Start() error {
-	if err := d.InitComputeV2(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.StartInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to start instance: %s", err)
 	}
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", LogHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
 	}
 	return nil
 }
 
 func (d *Driver) Stop() error {
-	if err := d.InitComputeV2(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.StopInstance(d.InstanceID); err != nil {
-		return fmt.Errorf("failed to stop instance: %s", LogHttp500(err))
+		return fmt.Errorf("failed to stop instance: %s", logHttp500(err))
 	}
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusStopped); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", LogHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -205,26 +205,26 @@ func (d *Driver) Remove() error {
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
-	if err := d.DeleteInstance(); err != nil {
+	if err := d.deleteInstance(); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", LogHttp500(err)))
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHttp500(err)))
 		}
 	}
 	if d.FloatingIP.DriverManaged && d.FloatingIP.Value != "" {
 		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", LogHttp500(err)))
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHttp500(err)))
 		}
 	}
-	if err := d.DeleteSubnet(); err != nil {
+	if err := d.deleteSubnet(); err != nil {
 		errs = multierror.Append(errs, err)
 	}
-	if err := d.DeleteSecGroups(); err != nil {
+	if err := d.deleteSecGroups(); err != nil {
 		errs = multierror.Append(errs, err)
 	}
-	if err := d.DeleteVPC(); err != nil {
+	if err := d.deleteVPC(); err != nil {
 		errs = multierror.Append(errs, err)
 	}
 	return errs

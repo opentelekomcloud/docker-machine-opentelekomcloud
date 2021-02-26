@@ -11,38 +11,38 @@ import (
 	"strings"
 )
 
-func (d *Driver) InitCompute() error {
-	if err := d.InitComputeV1(); err != nil {
+func (d *Driver) initCompute() error {
+	if err := d.initComputeV1(); err != nil {
 		return err
 	}
-	return d.InitComputeV2()
+	return d.initComputeV2()
 }
 
-func (d *Driver) InitComputeV2() error {
+func (d *Driver) initComputeV2() error {
 	if err := d.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate: %s", LogHttp500(err))
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitCompute(); err != nil {
-		return fmt.Errorf("failed to initialize Compute v2 service: %s", LogHttp500(err))
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
 	}
 	return nil
 }
 
-func (d *Driver) InitComputeV1() error {
+func (d *Driver) initComputeV1() error {
 	if err := d.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate: %s", LogHttp500(err))
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitECS(); err != nil {
-		return fmt.Errorf("failed to initialize Compute v2 service: %s", LogHttp500(err))
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
 	}
 	return nil
 }
 
-func (d *Driver) CreateInstance() error {
+func (d *Driver) createInstance() error {
 	if d.InstanceID != "" {
 		return nil
 	}
-	if err := d.InitCompute(); err != nil {
+	if err := d.initCompute(); err != nil {
 		return err
 	}
 	var secGroups []cloudservers.SecurityGroup
@@ -83,20 +83,20 @@ func (d *Driver) CreateInstance() error {
 
 	id, err := d.client.CreateECSInstance(opts, 600)
 	if err != nil {
-		return fmt.Errorf("failed to create compute v1 instance: %s", LogHttp500(err))
+		return fmt.Errorf("failed to create compute v1 instance: %s", logHttp500(err))
 	}
 	d.InstanceID = id
 
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", LogHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
 	}
 
 	return nil
 }
 
-func (d *Driver) LoadSSHKey() error {
+func (d *Driver) loadSSHKey() error {
 	log.Debug("Loading Key Pair", d.KeyPairName.Value)
-	if err := d.InitComputeV2(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
@@ -106,7 +106,7 @@ func (d *Driver) LoadSSHKey() error {
 	}
 	publicKey, err := d.client.GetPublicKey(d.KeyPairName.Value)
 	if err != nil {
-		return fmt.Errorf("failed to get public key: %s", LogHttp500(err))
+		return fmt.Errorf("failed to get public key: %s", logHttp500(err))
 	}
 	privateKeyPath := d.GetSSHKeyPath()
 	if err := ioutil.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
@@ -119,7 +119,7 @@ func (d *Driver) LoadSSHKey() error {
 	return nil
 }
 
-func (d *Driver) CreateSSHKey() error {
+func (d *Driver) createSSHKey() error {
 	d.KeyPairName.Value = strings.Replace(d.KeyPairName.Value, ".", "_", -1)
 	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
 	keyPath := d.GetSSHKeyPath()
@@ -132,7 +132,7 @@ func (d *Driver) CreateSSHKey() error {
 		return fmt.Errorf("failed to read public key file: %s", err)
 	}
 	d.KeyPairName = managedSting{d.KeyPairName.Value, true}
-	if err := d.InitComputeV2(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if _, err := d.createKeyPair(publicKey); err != nil {
@@ -144,23 +144,23 @@ func (d *Driver) CreateSSHKey() error {
 func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	kp, err := d.client.CreateKeyPair(d.KeyPairName.Value, string(publicKey))
 	if err != nil {
-		return "", fmt.Errorf("failed to create key pair: %s", LogHttp500(err))
+		return "", fmt.Errorf("failed to create key pair: %s", logHttp500(err))
 	}
 	return kp.PublicKey, nil
 }
 
-func (d *Driver) DeleteInstance() error {
-	if err := d.InitComputeV2(); err != nil {
+func (d *Driver) deleteInstance() error {
+	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
-		return fmt.Errorf("failed to delete instance: %s", LogHttp500(err))
+		return fmt.Errorf("failed to delete instance: %s", logHttp500(err))
 	}
 	err := d.client.WaitForInstanceStatus(d.InstanceID, "")
 	switch err.(type) {
 	case golangsdk.ErrDefault404:
 	default:
-		return fmt.Errorf("failed to wait for instance status after deletion: %s", LogHttp500(err))
+		return fmt.Errorf("failed to wait for instance status after deletion: %s", logHttp500(err))
 	}
 	return nil
 }

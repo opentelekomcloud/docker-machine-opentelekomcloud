@@ -35,20 +35,20 @@ const (
 	defaultVolumeType    = "SSD"
 )
 
-// LogHttp500 appends error message with response 500 body
-func LogHttp500(err error) error {
+// logHttp500 appends error message with response 500 body
+func logHttp500(err error) error {
 	if e, ok := err.(golangsdk.ErrDefault500); ok {
 		return fmt.Errorf("%s: %s", e, string(e.Body))
 	}
 	return err
 }
 
-// ResolveIDs resolves name to IDs where possible
-func (d *Driver) ResolveIDs() error {
+// resolveIDs resolves name to IDs where possible
+func (d *Driver) resolveIDs() error {
 	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
-			return fmt.Errorf("failed to find VPC by name: %s", LogHttp500(err))
+			return fmt.Errorf("failed to find VPC by name: %s", logHttp500(err))
 		}
 		d.VpcID = managedSting{Value: vpcID}
 	}
@@ -56,7 +56,7 @@ func (d *Driver) ResolveIDs() error {
 	if d.SubnetID.Value == "" && d.SubnetName != "" {
 		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
-			return fmt.Errorf("failed to find subnet by name: %s", LogHttp500(err))
+			return fmt.Errorf("failed to find subnet by name: %s", logHttp500(err))
 		}
 		d.SubnetID = managedSting{Value: subnetID}
 	}
@@ -64,7 +64,7 @@ func (d *Driver) ResolveIDs() error {
 	if d.FlavorID == "" && d.FlavorName != "" {
 		flavID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
-			return fmt.Errorf("fail when searching flavor by name: %s", LogHttp500(err))
+			return fmt.Errorf("fail when searching flavor by name: %s", logHttp500(err))
 		}
 		if flavID == "" {
 			return fmt.Errorf(notFound, "flavor", d.FlavorName)
@@ -74,7 +74,7 @@ func (d *Driver) ResolveIDs() error {
 	if d.RootVolumeOpts.SourceID == "" && d.ImageName != "" {
 		imageID, err := d.client.FindImage(d.ImageName)
 		if err != nil {
-			return fmt.Errorf("failed to find image by name: %s", LogHttp500(err))
+			return fmt.Errorf("failed to find image by name: %s", logHttp500(err))
 		}
 		if imageID == "" {
 			return fmt.Errorf(notFound, "image", d.ImageName)
@@ -83,14 +83,14 @@ func (d *Driver) ResolveIDs() error {
 	}
 	sgIDs, err := d.client.FindSecurityGroups(d.SecurityGroups)
 	if err != nil {
-		return fmt.Errorf("failed to resolve security group IDs: %s", LogHttp500(err))
+		return fmt.Errorf("failed to resolve security group IDs: %s", logHttp500(err))
 	}
 	d.SecurityGroupIDs = sgIDs
 
 	if d.ServerGroupID == "" && d.ServerGroup != "" {
 		serverGroupID, err := d.client.FindServerGroup(d.ServerGroup)
 		if err != nil {
-			return fmt.Errorf("failed to resolve server group: %s", LogHttp500(err))
+			return fmt.Errorf("failed to resolve server group: %s", logHttp500(err))
 		}
 		d.ServerGroupID = serverGroupID
 	}
@@ -98,7 +98,7 @@ func (d *Driver) ResolveIDs() error {
 	return nil
 }
 
-func (d *Driver) CheckConfig() error {
+func (d *Driver) checkConfig() error {
 	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}
@@ -109,14 +109,14 @@ func (d *Driver) CheckConfig() error {
 		return fmt.Errorf("at least one authorization method must be provided")
 	}
 	if len(d.UserData) > 0 && d.UserDataFile != "" {
-		return fmt.Errorf("both `-otc-user-data` and `-otc-user-data` is defined")
+		return fmt.Errorf("both `-otc-user-data` and `-otc-user-data-file` is defined")
 	}
 	return nil
 }
 
-// MergeClouds merges two Config recursively (the AuthInfo also gets merged).
+// mergeClouds merges two Config recursively (the AuthInfo also gets merged).
 // In case both Config define a value, the value in the 'cloud' cloud takes precedence
-func MergeClouds(cloud, fallback interface{}) (*openstack.Cloud, error) {
+func mergeClouds(cloud, fallback interface{}) (*openstack.Cloud, error) {
 	overrideJson, err := json.Marshal(fallback)
 	if err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ func MergeClouds(cloud, fallback interface{}) (*openstack.Cloud, error) {
 	return mergedCloud, nil
 }
 
-func (d *Driver) GetUserData() error {
+func (d *Driver) getUserData() error {
 	if d.UserDataFile == "" || len(d.UserData) != 0 {
 		return nil
 	}
@@ -195,12 +195,12 @@ func (d *Driver) GetURL() (string, error) {
 }
 
 func (d *Driver) GetState() (state.State, error) {
-	if err := d.InitComputeV2(); err != nil {
+	if err := d.initComputeV2(); err != nil {
 		return state.None, err
 	}
 	instance, err := d.client.GetInstanceStatus(d.InstanceID)
 	if err != nil {
-		return state.None, fmt.Errorf("failed to get instance state: %s", LogHttp500(err))
+		return state.None, fmt.Errorf("failed to get instance state: %s", logHttp500(err))
 	}
 	switch instance.Status {
 	case services.InstanceStatusRunning:
@@ -520,5 +520,5 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	}
 
 	d.SetSwarmConfigFromFlags(flags)
-	return d.CheckConfig()
+	return d.checkConfig()
 }
