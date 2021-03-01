@@ -152,13 +152,13 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "Existing security groups to use, separated by comma",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-floating-ip",
-			EnvVar: "OS_FLOATING_IP",
+			Name:   "otc-eip",
+			EnvVar: "OS_EIP",
 			Usage:  "OpenTelekomCloud floating IP to use",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-floating-ip-type",
-			EnvVar: "OS_FLOATING_IP_TYPE",
+			Name:   "otc-eip-type",
+			EnvVar: "OS_EIP_TYPE",
 			Usage:  "OpenTelekomCloud bandwidth type",
 			Value:  "5_bgp",
 		},
@@ -175,7 +175,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  "PER",
 		},
 		mcnflag.BoolFlag{
-			Name:  "otc-skip-ip",
+			Name:  "otc-skip-eip",
 			Usage: "If set, elastic IP won't be created",
 		},
 		mcnflag.IntFlag{
@@ -257,7 +257,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.VpcName = flags.String("otc-vpc-name")
 	d.SubnetID = managedSting{Value: flags.String("otc-subnet-id")}
 	d.SubnetName = flags.String("otc-subnet-name")
-	d.FloatingIP = managedSting{Value: flags.String("otc-floating-ip")}
+	d.ElasticIP = managedSting{Value: flags.String("otc-eip")}
 	d.IPVersion = flags.Int("otc-ip-version")
 	d.SSHUser = flags.String("otc-ssh-user")
 	d.SSHPort = flags.Int("otc-ssh-port")
@@ -282,11 +282,11 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	}
 
 	d.eipConfig = &services.ElasticIPOpts{
-		IPType:        flags.String("otc-floating-ip-type"),
+		IPType:        flags.String("otc-eip-type"),
 		BandwidthSize: flags.Int("otc-bandwidth-size"),
 		BandwidthType: flags.String("otc-bandwidth-type"),
 	}
-	d.skipEIPCreation = flags.Bool("otc-skip-ip")
+	d.skipEIPCreation = flags.Bool("otc-skip-eip")
 
 	if sg := flags.String("otc-sec-groups"); sg != "" {
 		d.SecurityGroups = strings.Split(sg, ",")

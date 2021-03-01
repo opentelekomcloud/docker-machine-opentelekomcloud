@@ -53,7 +53,7 @@ type Driver struct {
 	ServerGroupID          string       `json:"-"`
 	ManagedSecurityGroup   string       `json:"-"`
 	ManagedSecurityGroupID string       `json:"managed_security_group,omitempty"`
-	FloatingIP             managedSting `json:"floating_ip"`
+	ElasticIP              managedSting `json:"eip"`
 	Token                  string       `json:"token,omitempty"`
 	UserDataFile           string       `json:"-"`
 	UserData               []byte       `json:"-"`
@@ -171,7 +171,7 @@ func (d *Driver) Create() error {
 			return err
 		}
 	} else {
-		if err := d.createFloatingIP(); err != nil {
+		if err := d.createElasticIP(); err != nil {
 			return err
 		}
 	}
@@ -217,8 +217,8 @@ func (d *Driver) Remove() error {
 			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHttp500(err)))
 		}
 	}
-	if d.FloatingIP.DriverManaged && d.FloatingIP.Value != "" {
-		if err := d.client.DeleteFloatingIP(d.FloatingIP.Value); err != nil {
+	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
+		if err := d.client.DeleteFloatingIP(d.ElasticIP.Value); err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHttp500(err)))
 		}
 	}
@@ -281,7 +281,7 @@ func (d *Driver) GetSSHUsername() string {
 }
 
 func (d *Driver) GetIP() (string, error) {
-	d.IPAddress = d.FloatingIP.Value
+	d.IPAddress = d.ElasticIP.Value
 	return d.BaseDriver.GetIP()
 }
 

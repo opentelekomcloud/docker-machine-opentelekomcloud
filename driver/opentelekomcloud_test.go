@@ -157,8 +157,8 @@ func cleanupResources(driver *Driver) error {
 	if err != nil {
 		return err
 	}
-	if driver.FloatingIP.DriverManaged && driver.FloatingIP.Value != "" {
-		if err := driver.client.DeleteFloatingIP(driver.FloatingIP.Value); err != nil {
+	if driver.ElasticIP.DriverManaged && driver.ElasticIP.Value != "" {
+		if err := driver.client.DeleteFloatingIP(driver.ElasticIP.Value); err != nil {
 			log.Error(err)
 		}
 	}
@@ -280,13 +280,13 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 	_ = driver.client.DeleteKeyPair(kpName)
 }
 
-func TestDriver_WithoutFloatingIP(t *testing.T) {
+func TestDriver_WithoutEIP(t *testing.T) {
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
 			"otc-cloud":       "otc",
 			"otc-subnet-name": subnetName,
 			"otc-vpc-name":    vpcName,
-			"otc-skip-ip":     true,
+			"otc-skip-eip":    true,
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -298,7 +298,7 @@ func TestDriver_WithoutFloatingIP(t *testing.T) {
 	status, err := driver.client.GetInstanceStatus(driver.InstanceID)
 	assert.NoError(t, err)
 	assert.Len(t, status.Addresses, 1)
-	assert.NotEmpty(t, driver.FloatingIP)
+	assert.NotEmpty(t, driver.ElasticIP)
 	assert.NoError(t, driver.Remove())
 }
 

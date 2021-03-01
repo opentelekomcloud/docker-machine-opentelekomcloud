@@ -68,19 +68,19 @@ func (d *Driver) createDefaultGroup() error {
 	return nil
 }
 
-func (d *Driver) createFloatingIP() error {
-	if d.FloatingIP.Value == "" {
+func (d *Driver) createElasticIP() error {
+	if d.ElasticIP.Value == "" {
 		eip, err := d.client.CreateEIP(d.eipConfig)
 		if err != nil {
-			return fmt.Errorf("failed to create floating IP: %s", logHttp500(err))
+			return fmt.Errorf("failed to create elastic IP: %s", logHttp500(err))
 		}
 		if err := d.client.WaitForEIPActive(eip.ID); err != nil {
-			return fmt.Errorf("failed to wait for floating IP to be active: %s", logHttp500(err))
+			return fmt.Errorf("failed to wait for elastic IP to be active: %s", logHttp500(err))
 		}
-		d.FloatingIP = managedSting{Value: eip.PublicAddress, DriverManaged: true}
+		d.ElasticIP = managedSting{Value: eip.PublicAddress, DriverManaged: true}
 	}
-	if err := d.client.BindFloatingIP(d.FloatingIP.Value, d.InstanceID); err != nil {
-		return fmt.Errorf("failed to bind floating IP: %s", logHttp500(err))
+	if err := d.client.BindFloatingIP(d.ElasticIP.Value, d.InstanceID); err != nil {
+		return fmt.Errorf("failed to bind elastic IP: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -92,7 +92,7 @@ func (d *Driver) useLocalIP() error {
 	}
 	for _, addrPool := range instance.Addresses {
 		addrDetails := addrPool.([]interface{})[0].(map[string]interface{})
-		d.FloatingIP = managedSting{
+		d.ElasticIP = managedSting{
 			Value:         addrDetails["addr"].(string),
 			DriverManaged: false,
 		}
