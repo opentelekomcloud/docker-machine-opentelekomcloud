@@ -63,14 +63,14 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Value:  defaultRegion,
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-access-key-id",
+			Name:   "otc-access-key",
 			Usage:  "OpenTelekomCloud access key ID for AK/SK auth",
-			EnvVar: "OS_ACCESS_KEY_ID",
+			EnvVar: "OS_ACCESS_KEY",
 		},
 		mcnflag.StringFlag{
-			Name:   "otc-secret-access-key",
+			Name:   "otc-secret-key",
 			Usage:  "OpenTelekomCloud secret access key for AK/SK auth",
-			EnvVar: "OS_SECRET_ACCESS_KEY",
+			EnvVar: "OS_SECRET_KEY",
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-availability-zone",
@@ -272,8 +272,8 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	if tags != "" {
 		d.Tags = strings.Split(tags, ",")
 	}
-	d.AccessKey = flags.String("otc-access-key-id")
-	d.SecretKey = flags.String("otc-secret-access-key")
+	d.AccessKey = flags.String("otc-access-key")
+	d.SecretKey = flags.String("otc-secret-key")
 
 	d.RootVolumeOpts = &services.DiskOpts{
 		SourceID: flags.String("otc-image-id"),

@@ -89,10 +89,10 @@ func TestDriver_Auth(t *testing.T) {
 			"otc-password":     testEnv.GetEnv("PASSWORD"),
 		},
 		"ak/sk": {
-			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
-			"otc-domain-name":       testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name":      testEnv.GetEnv("PROJECT_NAME"),
+			"otc-access-key":   testEnv.GetEnv("ACCESS_KEY"),
+			"otc-secret-key":   testEnv.GetEnv("SECRET_KEY"),
+			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
 		},
 	}
 	for name, flags := range testFlags {
@@ -118,8 +118,8 @@ func TestDriver_AuthCredentials(t *testing.T) {
 func TestDriver_AuthAKSK(t *testing.T) {
 	_, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
+			"otc-access-key": testEnv.GetEnv("ACCESS_KEY"),
+			"otc-secret-key": testEnv.GetEnv("SECRET_KEY"),
 		})
 	assert.NoError(t, err)
 }
@@ -128,13 +128,13 @@ func TestDriver_Create(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,
 		"ak/sk": {
-			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
-			"otc-domain-name":       testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name":      testEnv.GetEnv("PROJECT_NAME"),
-			"otc-subnet-name":       defaultFlags["otc-subnet-name"],
-			"otc-vpc-name":          defaultFlags["otc-vpc-name"],
-			"otc-tags":              "machine,test",
+			"otc-access-key":   testEnv.GetEnv("ACCESS_KEY"),
+			"otc-secret-key":   testEnv.GetEnv("SECRET_KEY"),
+			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"otc-subnet-name":  defaultFlags["otc-subnet-name"],
+			"otc-vpc-name":     defaultFlags["otc-vpc-name"],
+			"otc-tags":         "machine,test",
 		},
 	}
 
