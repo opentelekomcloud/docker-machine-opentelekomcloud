@@ -13,8 +13,8 @@ There are two more options of docker-machine driver suitable for usage with Open
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 * [DockerMachine4OTC](https://github.com/Huawei/DockerMachineDriver4OTC) ― older OTC driver implementation by Huawei
 
-This driver versioned `v0.2.x` is inspired by `docker-machine-openstack` and targets to provide full backward compatibility
-with `DockerMachineDriver4OTC`.
+This driver versioned is inspired by `docker-machine-openstack` and targets to provide full, but only `v0.2.x`
+aims for to provide full backward compatibility with `DockerMachineDriver4OTC`.
 
 Backward compatibility meaning, that this driver uses flags and env variable naming that differs from OpenStack
 convention.
@@ -29,7 +29,7 @@ Support using of resource names instead of IDs | Yes         | No        | Yes
 Support of CI/CD pipelines                     | **Yes**     | No        | No
 User data injection                            | Yes         | No        | Yes
 Elastic IP pool selection                      | No          | No        | Yes
-Custom CA usage                                | No          | No        | Yes
+Custom CA usage                                | Yes         | No        | Yes
 Insecure mode (without TLS certificate check)  | No          | No        | Yes
 Bandwidth configuration                        | Yes         | Yes       | No
 Root volume configuration                      | Yes         | Yes       | No
@@ -45,7 +45,7 @@ Driver can be installed several ways
 
 #### From source code
 
-_(Requires Go 1.15+, gcc and make installed)_
+_(Requires Go 1.13+, gcc and make installed)_
 
 1. Clone [this](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud) git repository to any location
 2. Run `make build && sudo make install`, driver for linux will be built and copied to `/usr/local/bin`
