@@ -22,12 +22,12 @@ Automated creation of required infrastructure   | **Yes**       | No        | No
 Support of `clouds.yaml` and `OS_CLOUD`         | **Yes**       | No        | No
 Support using of resource names instead of IDs  | Yes           | No        | Yes
 User data injection                             | Yes           | No        | Yes
-Floating IP pool selection                      | No            | No        | Yes
+Elastic IP pool selection                       | No            | No        | Yes
 Custom CA usage                                 | No            | No        | Yes
 Insecure mode (without TLS certificate check)   | No            | No        | Yes
 Bandwidth configuration                         | Yes           | Yes       | No
 Root volume configuration                       | Yes           | Yes       | No
-Optional usage of floating IP                   | Yes           | Yes       | No
+Optional usage of elastic IP                    | Yes           | Yes       | No
 AK/SK auth                                      | Yes           | Yes       | No
 Server group                                    | **Yes**       | No        | No
 Security group(s)                               | Multiple      | Single    | Multiple
@@ -68,7 +68,7 @@ $ docker-machine create -d otc --otc-cloud otc default
 - **Security Group**: `docker-machine-grp`
 - **VPC**: `vpc-docker-machine`
 - **Subnet**: `subnet-docker-machine`
-- **Floating IP**: with bandwidth limited to 100 MBit/s
+- **Elastic IP**: with bandwidth limited to 100 MBit/s
 
 **Machine with following setup will be started:**
 - **Flavor** `s2.large.2`
@@ -84,16 +84,16 @@ Flag | Env variable | Default value | Description
 `--otc-secret-key`          | `OS_SECRET_KEY`           |                                       | Secret key for AK/SK auth
 `--otc-auth-url`            | `OS_AUTH_URL`             | https://iam.eu-de.otc.t-systems.com   | Authentication URL
 `--otc-availability-zone`   | `OS_AVAILABILITY_ZONE`    | eu-de-03                              | Availability zone
-`--otc-bandwidth-size`      | `OS_BANDWIDTH_SIZE`       | 100 (MBit/s)                          | Bandwidth size
-`--otc-bandwidth-type`      | `OS_BANDWIDTH_TYPE`       | PER (exclusive bandwidth)             | Bandwidth share type
 `--otc-cloud`               | `OS_CLOUD`                |                                       | Name of cloud in `clouds.yaml` file
 `--otc-domain-id`           | `OS_DOMAIN_ID`            |                                       | OpenTelekomCloud Domain ID
 `--otc-domain-name`         | `OS_DOMAIN_NAME`          |                                       | OpenTelekomCloud Domain name
 `--otc-endpoint-type`       | `OS_INTERFACE`            | public                                | Endpoint type
 `--otc-flavor-id`           | `OS_FLAVOR_ID`            |                                       | Flavor id to use for the instance
 `--otc-flavor-name`         | `OS_FLAVOR_NAME`          | s2.large.2                            | Flavor name to use for the instance
-`--otc-floating-ip`         | `OS_FLOATING_IP`          |                                       | Floating IP to use
-`--otc-floating-ip-type`    | `OS_FLOATING_IP_TYPE`     | 5_bgp                                 | Bandwidth type (either `5_bgp` or `5_mailbgp`)
+`--otc-eip`                 | `OS_EIP`                  |                                       | Elastic IP to use
+`--otc-eip-type`            | `OS_EIP_TYPE`             | 5_bgp                                 | Bandwidth type (either `5_bgp` or `5_mailbgp`)
+`--otc-bandwidth-size`      | `OS_BANDWIDTH_SIZE`       | 100 (MBit/s)                          | Bandwidth size
+`--otc-bandwidth-type`      | `OS_BANDWIDTH_TYPE`       | PER (exclusive bandwidth)             | Bandwidth share type
 `--otc-image-id`            | `OS_IMAGE_ID`             |                                       | Image ID to use for the instance
 `--otc-image-name`          | `OS_IMAGE_NAME`           | Standard_Ubuntu_20.04_latest          | Image name to use for the instance
 `--otc-ip-version    `      | `OS_IP_VERSION`           | 4                                     | Version of IP address assigned for the machine (only 4 is supported by OTC for now)
