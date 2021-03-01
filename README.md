@@ -91,6 +91,7 @@ $ docker-machine create -d otc --otc-cloud otc default
 
 For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md)
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md)
+Please **note** that only `v0.2.x` supports old flags.
 
 #### With rancher
 
