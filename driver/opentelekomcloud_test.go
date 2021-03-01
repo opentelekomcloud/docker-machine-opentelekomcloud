@@ -30,7 +30,7 @@ var (
 		"otc-vpc-name":    vpcName,
 		"otc-tags":        "machine,test",
 	}
-	testEnv = openstack.NewEnv("OS_")
+	testEnv = openstack.NewEnv("OTC_")
 )
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
