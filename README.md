@@ -105,7 +105,7 @@ Flag | Env variable | Default value | Description
 `--otc-project-name`        | `OS_PROJECT_NAME`         |                                       | OpenTelekomCloud Project name
 `--otc-region`              | `OS_REGION`               | eu-de                                 | Region name
 `--otc-root-volume-size`    | `OS_ROOT_VOLUME_SIZE`     | 40                                    | Set volume size of root partition (in GB)
-`--otc-root-volume-type`    | `OS_ROOT_VOLUME_TYPE`     | SATA                                  | Set volume type of root partition (one of `SATA`, `SAS`, `SSD`)
+`--otc-root-volume-type`    | `OS_ROOT_VOLUME_TYPE`     | SSD                                   | Set volume type of root partition (one of `SATA`, `SAS`, `SSD`)
 `--otc-sec-groups`          | `OS_SECURITY_GROUP`       |                                       | Existing security groups to use, separated by comma
 `--otc-server-group`        | `OS_SERVER_GROUP`         |                                       | Define server group where server will be created
 `--otc-server-group-id`     | `OS_SERVER_GROUP_ID`      |                                       | Define server group where server will be created by ID
