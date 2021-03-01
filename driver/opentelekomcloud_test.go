@@ -30,7 +30,7 @@ var (
 		"otc-vpc-name":    vpcName,
 		"otc-tags":        "machine,test",
 	}
-	testEnv = openstack.NewEnv("OTC_")
+	testEnv = openstack.NewEnv("OS_")
 )
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
@@ -89,10 +89,10 @@ func TestDriver_Auth(t *testing.T) {
 			"otc-password":     testEnv.GetEnv("PASSWORD"),
 		},
 		"ak/sk": {
-			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
-			"otc-domain-name":    testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name":   testEnv.GetEnv("PROJECT_NAME"),
+			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
+			"otc-domain-name":       testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name":      testEnv.GetEnv("PROJECT_NAME"),
 		},
 	}
 	for name, flags := range testFlags {
@@ -104,7 +104,7 @@ func TestDriver_Auth(t *testing.T) {
 
 }
 
-func TestDriver_AuthCreds(t *testing.T) {
+func TestDriver_AuthCredentials(t *testing.T) {
 	_, err := newDriverFromFlags(
 		map[string]interface{}{
 			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
@@ -118,8 +118,8 @@ func TestDriver_AuthCreds(t *testing.T) {
 func TestDriver_AuthAKSK(t *testing.T) {
 	_, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
+			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
 		})
 	assert.NoError(t, err)
 }
@@ -128,13 +128,13 @@ func TestDriver_Create(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,
 		"ak/sk": {
-			"otc-access-key-id":  testEnv.GetEnv("ACCESS_KEY_ID"),
-			"otc-access-key-key": testEnv.GetEnv("ACCESS_KEY_SECRET"),
-			"otc-domain-name":    testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name":   testEnv.GetEnv("PROJECT_NAME"),
-			"otc-subnet-name":    defaultFlags["otc-subnet-name"],
-			"otc-vpc-name":       defaultFlags["otc-vpc-name"],
-			"otc-tags":           "machine,test",
+			"otc-access-key-id":     testEnv.GetEnv("ACCESS_KEY_ID"),
+			"otc-secret-access-key": testEnv.GetEnv("SECRET_ACCESS_KEY"),
+			"otc-domain-name":       testEnv.GetEnv("DOMAIN_NAME"),
+			"otc-project-name":      testEnv.GetEnv("PROJECT_NAME"),
+			"otc-subnet-name":       defaultFlags["otc-subnet-name"],
+			"otc-vpc-name":          defaultFlags["otc-vpc-name"],
+			"otc-tags":              "machine,test",
 		},
 	}
 
@@ -402,8 +402,8 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 }
 
 func TestDriver_FaultyRemove(t *testing.T) {
-	driver, derr := defaultDriver()
-	require.NoError(t, derr)
+	driver, dErr := defaultDriver()
+	require.NoError(t, dErr)
 	require.NoError(t, driver.initCompute())
 	require.NoError(t, driver.initNetwork())
 	require.NoError(t, driver.resolveIDs())
