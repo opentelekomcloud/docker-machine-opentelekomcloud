@@ -88,7 +88,7 @@ For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md)
 
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
 
-Please **note** that only `v0.2.x` supports old flags and targets to provide full backward compatibility
+Please **note** that only `v0.2.x` support old flags and targets to provide full backward compatibility
 with `DockerMachineDriver4OTC`.
 
 #### With rancher
