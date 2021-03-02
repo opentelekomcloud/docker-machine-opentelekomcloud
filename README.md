@@ -19,7 +19,7 @@ Automated creation of required infrastructure  | **Yes**     | No        | No
 Support of `clouds.yaml` and `OS_CLOUD`        | **Yes**     | No        | No
 Support using of resource names instead of IDs | Yes         | No        | Yes
 User data injection                            | Yes         | No        | Yes
-Elastic IP pool selection                      | No          | No        | Yes
+Elastic (floating) IP pool selection           | No          | No        | Yes
 Custom CA usage                                | Yes         | No        | Yes
 Insecure mode (without TLS certificate check)  | No          | No        | Yes
 Bandwidth configuration                        | Yes         | Yes       | No
