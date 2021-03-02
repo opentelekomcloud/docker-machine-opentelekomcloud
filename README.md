@@ -68,17 +68,17 @@ $ docker-machine create -d otc --otc-cloud otc default
 
 **Following will be created if not provided:**
 
-- **Security Group**: `docker-machine-grp`
-- **VPC**: `vpc-docker-machine`
-- **Subnet**: `subnet-docker-machine`
-- **Elastic IP**: with bandwidth limited to `100` MBit/s
+- **Security Group:** `docker-machine-grp`
+- **VPC:** `vpc-docker-machine`
+- **Subnet:** `subnet-docker-machine`
+- **Elastic IP:** with bandwidth limited to `100` MBit/s
 
 **Machine with following setup will be started:**
 
-- **Flavor**: `s2.large.2`
-- **Image**: `Standard_Ubuntu_20.04_latest`
-- **Volume Size**: `40` GB
-- **Volume Type**: `SSD`
+- **Flavor:** `s2.large.2`
+- **Image:** `Standard_Ubuntu_20.04_latest`
+- **Volume Size:** `40` GB
+- **Volume Type:** `SSD`
 
 *Removing machine will remove all resources created on machine creation*
 
