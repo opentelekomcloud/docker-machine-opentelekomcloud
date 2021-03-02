@@ -88,6 +88,6 @@ Please **note** that only `v0.2.x` support old flags and targets to provide full
 with `DockerMachineDriver4OTC`. In versions `v0.3.+` duplicating options were removed and all environment variables are
 prefixed with `OS_`.
 
-#### With rancher
+#### With Rancher
 
-See [rancher integration](docs/usage-with-rancher.md).
+See [Rancher integration](docs/usage-with-rancher.md).
