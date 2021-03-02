@@ -44,19 +44,19 @@ _(Requires Go 1.13+, gcc and make installed)_
 #### Using built binary
 
 An already built driver for both Linux and Windows distributions can be found in
-[releases section](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/releases)
+[releases section](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/releases).
 
-You will have to copy driver to directory in `$PATH` so `docker-machine` would be able to find it
+You will have to copy driver to directory in `$PATH` so `docker-machine` would be able to find it.
 
 ### Usage
 
-`docker-machine-opentelekomcloud` can be used either as Rancher node driver or as stand-alone Docker Machine driver
+`docker-machine-opentelekomcloud` can be used either as Rancher node driver or as stand-alone Docker Machine driver.
 
 #### Stand-alone
 
-`OpenTelekomCloud` driver processes existing `clouds.yaml` files to authenticate in OTC
+`OpenTelekomCloud` driver processes existing `clouds.yaml` files to authenticate in OTC.
 
-Having `otc` cloud in your `clouds.yaml`, creating of docker-machine is as easy as running
+Having `otc` cloud in your `clouds.yaml`, creating of docker-machine is as easy as running.
 
 ```shell
 $ docker-machine create -d otc --otc-cloud otc default
@@ -76,11 +76,11 @@ $ docker-machine create -d otc --otc-cloud otc default
 - **Volume Size:** `40` GB
 - **Volume Type:** `SSD`
 
-*Removing machine will remove all resources created on machine creation*
+*Removing machine will remove all resources created on machine creation*.
 
 #### Supported options
 
-For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md)
+For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md).
 
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
 
@@ -90,4 +90,4 @@ prefixed with `OS_`.
 
 #### With rancher
 
-See [usage with rancher](docs/usage-with-rancher.md)
+See [rancher integration](docs/usage-with-rancher.md).
