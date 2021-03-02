@@ -13,11 +13,7 @@ There are two more options of docker-machine driver suitable for usage with Open
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 * [DockerMachine4OTC](https://github.com/Huawei/DockerMachineDriver4OTC) ― older OTC driver implementation by Huawei
 
-This driver versioned is inspired by `docker-machine-openstack` and targets to provide full, but only `v0.2.x`
-aims for to provide full backward compatibility with `DockerMachineDriver4OTC`.
-
-Backward compatibility meaning, that this driver uses flags and env variable naming that differs from OpenStack
-convention.
+This driver is inspired by `docker-machine-openstack`.
 
 In versions `v0.3.+` duplicating options were removed and all environment variables are prefixed with `OS_`.
 
@@ -26,7 +22,6 @@ Feature                                        | OTC (new)   | OTC (old) | Opens
 Automated creation of required infrastructure  | **Yes**     | No        | No
 Support of `clouds.yaml` and `OS_CLOUD`        | **Yes**     | No        | No
 Support using of resource names instead of IDs | Yes         | No        | Yes
-Support of CI/CD pipelines                     | **Yes**     | No        | No
 User data injection                            | Yes         | No        | Yes
 Elastic IP pool selection                      | No          | No        | Yes
 Custom CA usage                                | Yes         | No        | Yes
@@ -37,7 +32,7 @@ Optional usage of elastic IP                   | Yes         | Yes       | No
 AK/SK auth                                     | Yes         | Yes       | No
 Server group                                   | **Yes**     | No        | No
 Security group(s)                              | Multiple    | Single    | Multiple
-Usage with rancher                             | Needs setup | Built-in  | Built-in
+Rancher integration                            | Needs setup | Built-in  | Built-in
 
 ### Installation
 
@@ -90,8 +85,11 @@ $ docker-machine create -d otc --otc-cloud otc default
 #### Supported options
 
 For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md)
-For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md)
-Please **note** that only `v0.2.x` supports old flags.
+
+For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
+
+Please **note** that only `v0.2.x` supports old flags and targets to provide full backward compatibility
+with `DockerMachineDriver4OTC`.
 
 #### With rancher
 

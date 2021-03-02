@@ -4,7 +4,7 @@ Currently, `docker-machine-opentelekomcloud` is not a part of the Rancher, so ad
 
 ### Remove old node driver:
 
- * Open Rancher UI page and go to `Tools` -> `Drivers` -> `Node Drivers`
+ * Open Rancher UI page and go to `Tools` → `Drivers` → `Node Drivers`
  * Check current preinstalled `Open Telekom Cloud` driver and remove it, because it produces conflicts with current implementation.
 
 ### Usage of new node driver:
