@@ -13,10 +13,6 @@ There are two more options of docker-machine driver suitable for usage with Open
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 * [DockerMachine4OTC](https://github.com/Huawei/DockerMachineDriver4OTC) ― older OTC driver implementation by Huawei
 
-This driver is inspired by `docker-machine-openstack`.
-
-In versions `v0.3.+` duplicating options were removed and all environment variables are prefixed with `OS_`.
-
 Feature                                        | OTC (new)   | OTC (old) | Openstack
 ---                                            | ---         | ---       | ---
 Automated creation of required infrastructure  | **Yes**     | No        | No
@@ -89,7 +85,8 @@ For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md)
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
 
 Please **note** that only `v0.2.x` support old flags and targets to provide full backward compatibility
-with `DockerMachineDriver4OTC`.
+with `DockerMachineDriver4OTC`. In versions `v0.3.+` duplicating options were removed and all environment variables are
+prefixed with `OS_`.
 
 #### With rancher
 
