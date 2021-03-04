@@ -56,14 +56,14 @@ func (d *Driver) resolveIDs() error {
 	}
 
 	if d.FlavorID == "" && d.FlavorName != "" {
-		flavID, err := d.client.FindFlavor(d.FlavorName)
+		flavorID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
 			return fmt.Errorf("fail when searching flavor by name: %s", logHttp500(err))
 		}
-		if flavID == "" {
+		if flavorID == "" {
 			return fmt.Errorf(notFound, "flavor", d.FlavorName)
 		}
-		d.FlavorID = flavID
+		d.FlavorID = flavorID
 	}
 	if d.RootVolumeOpts.SourceID == "" && d.ImageName != "" {
 		imageID, err := d.client.FindImage(d.ImageName)
