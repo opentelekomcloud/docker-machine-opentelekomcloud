@@ -3,7 +3,7 @@ package opentelekomcloud
 import (
 	"fmt"
 
-	"github.com/opentelekomcloud-infra/crutch-house/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 )
 

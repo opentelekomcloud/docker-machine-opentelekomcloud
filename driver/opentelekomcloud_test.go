@@ -2,7 +2,6 @@ package opentelekomcloud
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,11 +9,12 @@ import (
 	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/ssh"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
-	"github.com/opentelekomcloud-infra/crutch-house/utils"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/utils"
 	"github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/extensions/servergroups"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +30,7 @@ var (
 		"otc-vpc-name":    vpcName,
 		"otc-tags":        "machine,test",
 	}
-	testEnv = openstack.NewEnv("OTC_")
+	testEnv = openstack.NewEnv("OS_")
 )
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
@@ -158,7 +158,8 @@ func cleanupResources(driver *Driver) error {
 		return err
 	}
 	if driver.ElasticIP.DriverManaged && driver.ElasticIP.Value != "" {
-		if err := driver.client.DeleteFloatingIP(driver.ElasticIP.Value); err != nil {
+		if err := driver.client.ReleaseEIP(eips.ListOpts{
+			PublicAddress: driver.ElasticIP.Value}); err != nil {
 			log.Error(err)
 		}
 	}
@@ -268,7 +269,7 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, driver.client.InitCompute())
-	fData, err := ioutil.ReadFile(pubKeyPath)
+	fData, err := os.ReadFile(pubKeyPath)
 	require.NoError(t, err)
 
 	_, err = driver.client.CreateKeyPair(kpName, string(fData))
@@ -306,7 +307,7 @@ func TestDriver_WithoutEIP(t *testing.T) {
 func TestDriver_CreateWithUserData(t *testing.T) {
 	fileName := "tmp.sh"
 	userData := []byte("#!/bin/bash\necho touch > /tmp/my")
-	require.NoError(t, ioutil.WriteFile(fileName, userData, os.ModePerm))
+	require.NoError(t, os.WriteFile(fileName, userData, os.ModePerm))
 	defer func() {
 		_ = os.Remove(fileName)
 	}()
@@ -329,7 +330,7 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 func TestDriver_UserDataRaw(t *testing.T) {
 	fileName := "tmp.sh"
 	userData := []byte("#!/bin/bash\necho touch > /tmp/my")
-	require.NoError(t, ioutil.WriteFile(fileName, userData, os.ModePerm))
+	require.NoError(t, os.WriteFile(fileName, userData, os.ModePerm))
 	defer func() {
 		_ = os.Remove(fileName)
 	}()
@@ -356,6 +357,7 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	driver, err := defaultDriver()
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initImage())
 	group, err := driver.client.CreateServerGroup(&servergroups.CreateOpts{
 		Name:     "test-group",
 		Policies: []string{"anti-affinity"},
@@ -385,6 +387,7 @@ func TestDriver_FaultyRemove(t *testing.T) {
 	driver, dErr := defaultDriver()
 	require.NoError(t, dErr)
 	require.NoError(t, driver.initCompute())
+	require.NoError(t, driver.initImage())
 	require.NoError(t, driver.initNetwork())
 	require.NoError(t, driver.resolveIDs())
 	driver.SubnetID.DriverManaged = true

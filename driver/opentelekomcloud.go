@@ -10,8 +10,9 @@ import (
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
 
 type managedSting struct {
@@ -63,7 +64,7 @@ type Driver struct {
 
 	RootVolumeOpts *services.DiskOpts `json:"-"`
 	eipConfig      *services.ElasticIPOpts
-	client         services.Client
+	client         *services.Client
 }
 
 // resCreateErr wraps errors happening in createResources
@@ -80,6 +81,9 @@ func (d *Driver) createResources() error {
 		return resCreateErr(err)
 	}
 	if err := d.initCompute(); err != nil {
+		return resCreateErr(err)
+	}
+	if err := d.initImage(); err != nil {
 		return resCreateErr(err)
 	}
 	if err := d.resolveIDs(); err != nil {
@@ -218,7 +222,9 @@ func (d *Driver) Remove() error {
 		}
 	}
 	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
-		if err := d.client.DeleteFloatingIP(d.ElasticIP.Value); err != nil {
+		if err := d.client.ReleaseEIP(eips.ListOpts{
+			PublicAddress: d.ElasticIP.Value,
+		}); err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHttp500(err)))
 		}
 	}

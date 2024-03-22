@@ -2,12 +2,12 @@ package opentelekomcloud
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/docker/machine/libmachine/log"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
-	"github.com/opentelekomcloud-infra/crutch-house/ssh"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 )
@@ -19,12 +19,26 @@ func (d *Driver) initCompute() error {
 	return d.initComputeV2()
 }
 
+func (d *Driver) initImage() error {
+	return d.initImageV2()
+}
+
 func (d *Driver) initComputeV2() error {
 	if err := d.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
 	}
 	if err := d.client.InitCompute(); err != nil {
 		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
+	}
+	return nil
+}
+
+func (d *Driver) initImageV2() error {
+	if err := d.Authenticate(); err != nil {
+		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
+	}
+	if err := d.client.InitIms(); err != nil {
+		return fmt.Errorf("failed to initialize Image v2 service: %s", logHttp500(err))
 	}
 	return nil
 }
@@ -101,7 +115,7 @@ func (d *Driver) loadSSHKey() error {
 		return err
 	}
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
-	privateKey, err := ioutil.ReadFile(d.PrivateKeyFile)
+	privateKey, err := os.ReadFile(d.PrivateKeyFile)
 	if err != nil {
 		return fmt.Errorf("failed to read private key: %s", err)
 	}
@@ -110,10 +124,10 @@ func (d *Driver) loadSSHKey() error {
 		return fmt.Errorf("failed to get public key: %s", logHttp500(err))
 	}
 	privateKeyPath := d.GetSSHKeyPath()
-	if err := ioutil.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
+	if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
 		return fmt.Errorf("failed to write private key file: %s", err)
 	}
-	if err := ioutil.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
+	if err := os.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
 		return fmt.Errorf("failed to write public key file: %s", err)
 	}
 
@@ -128,7 +142,7 @@ func (d *Driver) createSSHKey() error {
 		return err
 	}
 	d.PrivateKeyFile = keyPath
-	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
+	publicKey, err := os.ReadFile(keyPath + ".pub")
 	if err != nil {
 		return fmt.Errorf("failed to read public key file: %s", err)
 	}
