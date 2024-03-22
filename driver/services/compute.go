@@ -69,6 +69,7 @@ func blockDeviceOpts(opts *DiskOpts) bootfromvolume.BlockDevice {
 	}
 }
 
+// ExtendedServerOpts server opts struct
 type ExtendedServerOpts struct {
 	*servers.CreateOpts
 	SubnetID      string
@@ -425,6 +426,7 @@ func (c *Client) DeleteFloatingIP(floatingIP string) error {
 	return floatingips.Delete(c.ComputeV2, address).Err
 }
 
+// FindServerGroup - get server group
 func (c *Client) FindServerGroup(groupName string) (result string, err error) {
 	pager := servergroups.List(c.ComputeV2)
 	result = ""
@@ -444,15 +446,18 @@ func (c *Client) FindServerGroup(groupName string) (result string, err error) {
 	return
 }
 
+// AddTags - add tags to instance
 func (c *Client) AddTags(instanceID string, serverTags []string) error {
 	opts := tags.CreateOpts{Tags: serverTags}
 	return tags.Create(c.ComputeV2, instanceID, opts).Err
 }
 
+// CreateServerGroup - creates server group
 func (c *Client) CreateServerGroup(opts *servergroups.CreateOpts) (*servergroups.ServerGroup, error) {
 	return servergroups.Create(c.ComputeV2, opts).Extract()
 }
 
+// DeleteServerGroup - deletes server group
 func (c *Client) DeleteServerGroup(id string) error {
 	return servergroups.Delete(c.ComputeV2, id).Err
 }

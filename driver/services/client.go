@@ -31,10 +31,12 @@ type Client struct {
 	cloud *openstack.Cloud
 }
 
+// NewCloudClient - creates new cloud client
 func NewCloudClient(cloud *openstack.Cloud) *Client {
 	return &Client{cloud: cloud}
 }
 
+// NewClient - creates new client
 func NewClient(prefix string) (*Client, error) {
 	env := openstack.NewEnv(prefix)
 	cloud, err := env.Cloud()
@@ -50,6 +52,9 @@ func (c *Client) Authenticate() error {
 		return nil
 	}
 	ao, err := openstack.AuthOptionsFromEnv()
+	if err != nil {
+		return err
+	}
 	providerClient, err := openstack.AuthenticatedClient(ao)
 	if err != nil {
 		return err
@@ -59,6 +64,7 @@ func (c *Client) Authenticate() error {
 	return nil
 }
 
+// Token - get token
 func (c *Client) Token() (string, error) {
 	if c.Provider == nil || c.Provider.Token() == "" {
 		if err := c.Authenticate(); err != nil {

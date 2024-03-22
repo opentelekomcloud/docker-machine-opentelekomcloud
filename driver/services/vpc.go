@@ -148,12 +148,14 @@ func (c *Client) DeleteSubnet(vpcID string, subnetID string) error {
 	return subnets.Delete(c.VPC, vpcID, subnetID).Err
 }
 
+// ElasticIPOpts structure
 type ElasticIPOpts struct {
 	IPType        string
 	BandwidthSize int
 	BandwidthType string
 }
 
+// GetEIPStatus get status of ip
 func (c *Client) GetEIPStatus(eipID string) (string, error) {
 	eip, err := eips.Get(c.VPC, eipID).Extract()
 	if err != nil {
@@ -162,6 +164,7 @@ func (c *Client) GetEIPStatus(eipID string) (string, error) {
 	return eip.Status, err
 }
 
+// CreateEIP creates new eip
 func (c *Client) CreateEIP(opts *ElasticIPOpts) (*eips.PublicIp, error) {
 	if opts.IPType == "" {
 		opts.IPType = "5_bgp"
@@ -190,6 +193,7 @@ func (c *Client) CreateEIP(opts *ElasticIPOpts) (*eips.PublicIp, error) {
 	return eip, nil
 }
 
+// ReleaseEIP releases new eip
 func (c *Client) ReleaseEIP(opts eips.ListOpts) error {
 	elasticIPs, err := eips.List(c.VPC, opts)
 	if err != nil {
@@ -204,6 +208,7 @@ func (c *Client) ReleaseEIP(opts eips.ListOpts) error {
 	return nil
 }
 
+// WaitForEIPActive wait for ip to be active
 func (c *Client) WaitForEIPActive(eipID string) error {
 	return golangsdk.WaitFor(30, func() (bool, error) {
 		status, err := c.GetEIPStatus(eipID)

@@ -39,12 +39,17 @@ import (
 )
 
 var (
-	ErrKeyGeneration     = errors.New("unable to generate key")
-	ErrValidation        = errors.New("unable to validate key")
-	ErrPublicKey         = errors.New("unable to convert public key")
+	// ErrKeyGeneration generation error
+	ErrKeyGeneration = errors.New("unable to generate key")
+	// ErrValidation validation error
+	ErrValidation = errors.New("unable to validate key")
+	// ErrPublicKey conversion error
+	ErrPublicKey = errors.New("unable to convert public key")
+	// ErrUnableToWriteFile write error
 	ErrUnableToWriteFile = errors.New("unable to write file")
 )
 
+// KeyPair structure
 type KeyPair struct {
 	PrivateKey []byte
 	PublicKey  []byte

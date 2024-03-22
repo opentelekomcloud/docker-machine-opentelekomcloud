@@ -8,6 +8,7 @@ import (
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 )
 
+// GetCreateFlags - DMD flags
 func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 	return []mcnflag.Flag{
 		mcnflag.StringFlag{

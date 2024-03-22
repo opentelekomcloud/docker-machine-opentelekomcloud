@@ -15,24 +15,34 @@ import (
 )
 
 const (
+	// ClusterTypeECS default cluster type for ECS
 	ClusterTypeECS = "VirtualMachine"
+	// ClusterTypeBMS default cluster type for BMS
 	ClusterTypeBMS = "BareMetal"
 
-	ContainerNetworkModeOverlay  = "overlay_l2"
+	// ContainerNetworkModeOverlay default cluster network overlay
+	ContainerNetworkModeOverlay = "overlay_l2"
+	// ContainerNetworkModeUnderlay default cluster network underlay
 	ContainerNetworkModeUnderlay = "underlay_ipvlan"
-	ContainerNetworkModeVPC      = "vpc-router"
+	// ContainerNetworkModeVPC default cluster network mode
+	ContainerNetworkModeVPC = "vpc-router"
 
+	// ClusterAvailable default cluster state
 	ClusterAvailable = "Available"
-	NodeActive       = "Active"
+	// NodeActive default node state
+	NodeActive = "Active"
 
+	// EulerOSVersion default os version
 	EulerOSVersion = "EulerOS 2.5"
 )
 
+// Metadata cluster metadata
 type Metadata struct {
 	Labels      map[string]string
 	Annotations map[string]string
 }
 
+// CreateClusterOpts cluster structure
 type CreateClusterOpts struct {
 	Metadata
 	Name               string
@@ -51,6 +61,7 @@ type CreateClusterOpts struct {
 	ExtendParam        map[string]string
 }
 
+// CreateNodesOpts node structure
 type CreateNodesOpts struct {
 	Metadata
 	Name             string
@@ -197,14 +208,17 @@ func (c *Client) CreateCluster(opts *CreateClusterOpts) (*clusters.Clusters, err
 	return create, c.waitForCluster(clusterID)
 }
 
+// GetCluster cluster details
 func (c *Client) GetCluster(clusterID string) (*clusters.Clusters, error) {
 	return clusters.Get(c.CCE, clusterID).Extract()
 }
 
+// GetClusterCertificate cluster certificate
 func (c *Client) GetClusterCertificate(clusterID string) (*clusters.Certificate, error) {
 	return clusters.GetCert(c.CCE, clusterID).Extract()
 }
 
+// DeleteCluster removes cluster
 func (c *Client) DeleteCluster(clusterID string) error {
 	err := clusters.Delete(c.CCE, clusterID).Err
 	if err != nil {

@@ -46,6 +46,7 @@ func (c *Client) CreateECSInstance(opts cloudservers.CreateOptsBuilder, timeoutS
 	return id, nil
 }
 
+// GetECSStatus returns current ecs status
 func (c *Client) GetECSStatus(instanceID string) (*cloudservers.CloudServer, error) {
 	if err := c.InitECS(); err != nil {
 		return nil, err
@@ -53,6 +54,7 @@ func (c *Client) GetECSStatus(instanceID string) (*cloudservers.CloudServer, err
 	return cloudservers.Get(c.ECS, instanceID).Extract()
 }
 
+// DeleteECSInstance deletes ecs
 func (c *Client) DeleteECSInstance(instanceID string) error {
 	if err := c.InitECS(); err != nil {
 		return err

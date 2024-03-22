@@ -35,6 +35,7 @@ func RandomString(size int, prefix string, charset ...string) string {
 	return *(*string)(unsafe.Pointer(&result)) // faster way to convert big slice to string
 }
 
+// WaitForSpecificOrError waiting for specific errors
 func WaitForSpecificOrError(f func() (bool, error), maxAttempts int, waitInterval time.Duration) error {
 	for i := 0; i < maxAttempts; i++ {
 		stop, err := f()

@@ -11,6 +11,7 @@ import (
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/lbaas_v2/pools"
 )
 
+// LBStateActive default
 const LBStateActive = "ACTIVE"
 
 // InitNetworkV2 initializes OpenStack Neutron client
@@ -100,30 +101,37 @@ func (c *Client) BindFloatingIPToPort(floatingIP, portID string) error {
 	return floatingips.Update(c.NetworkV2, ids[0].ID, opts).Err
 }
 
+// CreateLBListener creates listener
 func (c *Client) CreateLBListener(opts *listeners.CreateOpts) (*listeners.Listener, error) {
 	return listeners.Create(c.NetworkV2, *opts).Extract()
 }
 
+// DeleteLBListener deletes listener
 func (c *Client) DeleteLBListener(id string) error {
 	return listeners.Delete(c.NetworkV2, id).Err
 }
 
+// CreateLBPool creates load balancer pool
 func (c *Client) CreateLBPool(opts *pools.CreateOpts) (*pools.Pool, error) {
 	return pools.Create(c.NetworkV2, opts).Extract()
 }
 
+// DeleteLBPool deletes load balancer pool
 func (c *Client) DeleteLBPool(id string) error {
 	return pools.Delete(c.NetworkV2, id).Err
 }
 
+// CreateLBMember creates load balancer member
 func (c *Client) CreateLBMember(poolID string, opts *pools.CreateMemberOpts) (*pools.Member, error) {
 	return pools.CreateMember(c.NetworkV2, poolID, *opts).Extract()
 }
 
+// GetLBMemberStatus get load balancer member status
 func (c *Client) GetLBMemberStatus(poolID, memberID string) (*pools.Member, error) {
 	return pools.GetMember(c.NetworkV2, poolID, memberID).Extract()
 }
 
+// DeleteLBMember deletes load balancer member
 func (c *Client) DeleteLBMember(poolID, memberID string) error {
 	return pools.DeleteMember(c.NetworkV2, poolID, memberID).Err
 }
@@ -154,6 +162,7 @@ func (c *Client) waitForLBV2viaPool(id string) error {
 	return fmt.Errorf("no Load Balancer on pool %s", id)
 }
 
+// CreateLBMonitor creates load balancer health monitor
 func (c *Client) CreateLBMonitor(opts *monitors.CreateOpts) (*monitors.Monitor, error) {
 	if err := c.waitForLBV2viaPool(opts.PoolID); err != nil {
 		return nil, err
@@ -168,6 +177,7 @@ func (c *Client) CreateLBMonitor(opts *monitors.CreateOpts) (*monitors.Monitor, 
 	return monitor, nil
 }
 
+// DeleteLBMonitor deletes load balancer health monitor
 func (c *Client) DeleteLBMonitor(id string) error {
 	return monitors.Delete(c.NetworkV2, id).Err
 }
