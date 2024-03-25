@@ -2,12 +2,12 @@ package opentelekomcloud
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"github.com/docker/machine/libmachine/log"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
-	"github.com/opentelekomcloud-infra/crutch-house/ssh"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 )
@@ -19,22 +19,36 @@ func (d *Driver) initCompute() error {
 	return d.initComputeV2()
 }
 
+func (d *Driver) initImage() error {
+	return d.initImageV2()
+}
+
 func (d *Driver) initComputeV2() error {
 	if err := d.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
+		return fmt.Errorf("failed to authenticate: %s", logHTTP500(err))
 	}
 	if err := d.client.InitCompute(); err != nil {
-		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHTTP500(err))
+	}
+	return nil
+}
+
+func (d *Driver) initImageV2() error {
+	if err := d.Authenticate(); err != nil {
+		return fmt.Errorf("failed to authenticate: %s", logHTTP500(err))
+	}
+	if err := d.client.InitIms(); err != nil {
+		return fmt.Errorf("failed to initialize Image v2 service: %s", logHTTP500(err))
 	}
 	return nil
 }
 
 func (d *Driver) initComputeV1() error {
 	if err := d.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate: %s", logHttp500(err))
+		return fmt.Errorf("failed to authenticate: %s", logHTTP500(err))
 	}
 	if err := d.client.InitECS(); err != nil {
-		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHttp500(err))
+		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHTTP500(err))
 	}
 	return nil
 }
@@ -84,12 +98,12 @@ func (d *Driver) createInstance() error {
 
 	id, err := d.client.CreateECSInstance(opts, 600)
 	if err != nil {
-		return fmt.Errorf("failed to create compute v1 instance: %s", logHttp500(err))
+		return fmt.Errorf("failed to create compute v1 instance: %s", logHTTP500(err))
 	}
 	d.InstanceID = id
 
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHTTP500(err))
 	}
 
 	return nil
@@ -101,19 +115,19 @@ func (d *Driver) loadSSHKey() error {
 		return err
 	}
 	log.Debug("Loading Private Key from", d.PrivateKeyFile)
-	privateKey, err := ioutil.ReadFile(d.PrivateKeyFile)
+	privateKey, err := os.ReadFile(d.PrivateKeyFile)
 	if err != nil {
 		return fmt.Errorf("failed to read private key: %s", err)
 	}
 	publicKey, err := d.client.GetPublicKey(d.KeyPairName.Value)
 	if err != nil {
-		return fmt.Errorf("failed to get public key: %s", logHttp500(err))
+		return fmt.Errorf("failed to get public key: %s", logHTTP500(err))
 	}
 	privateKeyPath := d.GetSSHKeyPath()
-	if err := ioutil.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
+	if err := os.WriteFile(privateKeyPath, privateKey, 0600); err != nil {
 		return fmt.Errorf("failed to write private key file: %s", err)
 	}
-	if err := ioutil.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
+	if err := os.WriteFile(privateKeyPath+".pub", publicKey, 0600); err != nil {
 		return fmt.Errorf("failed to write public key file: %s", err)
 	}
 
@@ -128,7 +142,7 @@ func (d *Driver) createSSHKey() error {
 		return err
 	}
 	d.PrivateKeyFile = keyPath
-	publicKey, err := ioutil.ReadFile(keyPath + ".pub")
+	publicKey, err := os.ReadFile(keyPath + ".pub")
 	if err != nil {
 		return fmt.Errorf("failed to read public key file: %s", err)
 	}
@@ -145,7 +159,7 @@ func (d *Driver) createSSHKey() error {
 func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	kp, err := d.client.CreateKeyPair(d.KeyPairName.Value, string(publicKey))
 	if err != nil {
-		return "", fmt.Errorf("failed to create key pair: %s", logHttp500(err))
+		return "", fmt.Errorf("failed to create key pair: %s", logHTTP500(err))
 	}
 	return kp.PublicKey, nil
 }
@@ -155,13 +169,13 @@ func (d *Driver) deleteInstance() error {
 		return err
 	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
-		return fmt.Errorf("failed to delete instance: %s", logHttp500(err))
+		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
 	}
 	err := d.client.WaitForInstanceStatus(d.InstanceID, "")
 	switch err.(type) {
 	case golangsdk.ErrDefault404:
 	default:
-		return fmt.Errorf("failed to wait for instance status after deletion: %s", logHttp500(err))
+		return fmt.Errorf("failed to wait for instance status after deletion: %s", logHTTP500(err))
 	}
 	return nil
 }

@@ -10,8 +10,9 @@ import (
 	"github.com/docker/machine/libmachine/mcnutils"
 	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
-	"github.com/opentelekomcloud-infra/crutch-house/services"
+	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
 
 type managedSting struct {
@@ -63,13 +64,13 @@ type Driver struct {
 
 	RootVolumeOpts *services.DiskOpts `json:"-"`
 	eipConfig      *services.ElasticIPOpts
-	client         services.Client
+	client         *services.Client
 }
 
 // resCreateErr wraps errors happening in createResources
 func resCreateErr(orig error) error {
 	if orig != nil {
-		return fmt.Errorf("fail in required resource creation: %s", logHttp500(orig))
+		return fmt.Errorf("fail in required resource creation: %s", logHTTP500(orig))
 	}
 	return nil
 }
@@ -80,6 +81,9 @@ func (d *Driver) createResources() error {
 		return resCreateErr(err)
 	}
 	if err := d.initCompute(); err != nil {
+		return resCreateErr(err)
+	}
+	if err := d.initImage(); err != nil {
 		return resCreateErr(err)
 	}
 	if err := d.resolveIDs(); err != nil {
@@ -98,6 +102,7 @@ func (d *Driver) createResources() error {
 	return nil
 }
 
+// Authenticate - DMD auth
 func (d *Driver) Authenticate() error {
 	if d.client != nil {
 		return nil
@@ -137,7 +142,7 @@ func (d *Driver) Authenticate() error {
 	}
 	d.client = services.NewCloudClient(cloud)
 	if err := d.client.Authenticate(); err != nil {
-		return fmt.Errorf("failed to authenticate the client: %s", logHttp500(err))
+		return fmt.Errorf("failed to authenticate the client: %s", logHTTP500(err))
 	}
 	return nil
 }
@@ -178,6 +183,7 @@ func (d *Driver) Create() error {
 	return nil
 }
 
+// Start the server
 func (d *Driver) Start() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
@@ -186,24 +192,26 @@ func (d *Driver) Start() error {
 		return fmt.Errorf("failed to start instance: %s", err)
 	}
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusRunning); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHTTP500(err))
 	}
 	return nil
 }
 
+// Stop the server
 func (d *Driver) Stop() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
 	}
 	if err := d.client.StopInstance(d.InstanceID); err != nil {
-		return fmt.Errorf("failed to stop instance: %s", logHttp500(err))
+		return fmt.Errorf("failed to stop instance: %s", logHTTP500(err))
 	}
 	if err := d.client.WaitForInstanceStatus(d.InstanceID, services.InstanceStatusStopped); err != nil {
-		return fmt.Errorf("failed to wait for instance status: %s", logHttp500(err))
+		return fmt.Errorf("failed to wait for instance status: %s", logHTTP500(err))
 	}
 	return nil
 }
 
+// Remove the server
 func (d *Driver) Remove() error {
 	var errs error
 	if err := d.Authenticate(); err != nil {
@@ -214,12 +222,14 @@ func (d *Driver) Remove() error {
 	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHttp500(err)))
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
 		}
 	}
 	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
-		if err := d.client.DeleteFloatingIP(d.ElasticIP.Value); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHttp500(err)))
+		if err := d.client.ReleaseEIP(eips.ListOpts{
+			PublicAddress: d.ElasticIP.Value,
+		}); err != nil {
+			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err)))
 		}
 	}
 	if err := d.deleteSubnet(); err != nil {
@@ -234,6 +244,7 @@ func (d *Driver) Remove() error {
 	return errs
 }
 
+// Restart the server
 func (d *Driver) Restart() error {
 	if err := d.Stop(); err != nil {
 		return err
@@ -241,6 +252,7 @@ func (d *Driver) Restart() error {
 	return d.Start()
 }
 
+// Kill the server
 func (d *Driver) Kill() error {
 	return d.Stop()
 }
@@ -258,14 +270,17 @@ func NewDriver(hostName, storePath string) *Driver {
 	}
 }
 
+// DriverName - get driverName
 func (d *Driver) DriverName() string {
 	return driverName
 }
 
+// GetSSHHostname - get ssh hostname
 func (d *Driver) GetSSHHostname() (string, error) {
 	return d.GetIP()
 }
 
+// GetSSHPort - get ssh port
 func (d *Driver) GetSSHPort() (int, error) {
 	if d.SSHPort == 0 {
 		d.SSHPort = defaultSSHPort
@@ -273,6 +288,7 @@ func (d *Driver) GetSSHPort() (int, error) {
 	return d.SSHPort, nil
 }
 
+// GetSSHUsername - get ssh username
 func (d *Driver) GetSSHUsername() string {
 	if d.SSHUser == "" {
 		d.SSHUser = defaultSSHUser
@@ -280,11 +296,13 @@ func (d *Driver) GetSSHUsername() string {
 	return d.SSHUser
 }
 
+// GetIP - get ssh ip
 func (d *Driver) GetIP() (string, error) {
 	d.IPAddress = d.ElasticIP.Value
 	return d.BaseDriver.GetIP()
 }
 
+// GetURL - get ssh url
 func (d *Driver) GetURL() (string, error) {
 	ip, err := d.GetIP()
 	if err != nil || ip == "" {
@@ -293,13 +311,14 @@ func (d *Driver) GetURL() (string, error) {
 	return fmt.Sprintf("tcp://%s", net.JoinHostPort(ip, strconv.Itoa(dockerPort))), nil
 }
 
+// GetState - get instance status
 func (d *Driver) GetState() (state.State, error) {
 	if err := d.initComputeV2(); err != nil {
 		return state.None, err
 	}
 	instance, err := d.client.GetInstanceStatus(d.InstanceID)
 	if err != nil {
-		return state.None, fmt.Errorf("failed to get instance state: %s", logHttp500(err))
+		return state.None, fmt.Errorf("failed to get instance state: %s", logHTTP500(err))
 	}
 	switch instance.Status {
 	case services.InstanceStatusRunning:

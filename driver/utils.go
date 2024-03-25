@@ -3,7 +3,7 @@ package opentelekomcloud
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
@@ -29,8 +29,8 @@ const (
 	defaultVolumeType    = "SSD"
 )
 
-// logHttp500 appends error message with response 500 body
-func logHttp500(err error) error {
+// logHTTP500 appends error message with response 500 body
+func logHTTP500(err error) error {
 	if e, ok := err.(golangsdk.ErrDefault500); ok {
 		return fmt.Errorf("%s: %s", e, string(e.Body))
 	}
@@ -42,7 +42,7 @@ func (d *Driver) resolveIDs() error {
 	if d.VpcID.Value == "" && d.VpcName != "" {
 		vpcID, err := d.client.FindVPC(d.VpcName)
 		if err != nil {
-			return fmt.Errorf("failed to find VPC by name: %s", logHttp500(err))
+			return fmt.Errorf("failed to find VPC by name: %s", logHTTP500(err))
 		}
 		d.VpcID = managedSting{Value: vpcID}
 	}
@@ -50,7 +50,7 @@ func (d *Driver) resolveIDs() error {
 	if d.SubnetID.Value == "" && d.SubnetName != "" {
 		subnetID, err := d.client.FindSubnet(d.VpcID.Value, d.SubnetName)
 		if err != nil {
-			return fmt.Errorf("failed to find subnet by name: %s", logHttp500(err))
+			return fmt.Errorf("failed to find subnet by name: %s", logHTTP500(err))
 		}
 		d.SubnetID = managedSting{Value: subnetID}
 	}
@@ -58,7 +58,7 @@ func (d *Driver) resolveIDs() error {
 	if d.FlavorID == "" && d.FlavorName != "" {
 		flavorID, err := d.client.FindFlavor(d.FlavorName)
 		if err != nil {
-			return fmt.Errorf("fail when searching flavor by name: %s", logHttp500(err))
+			return fmt.Errorf("fail when searching flavor by name: %s", logHTTP500(err))
 		}
 		if flavorID == "" {
 			return fmt.Errorf(notFound, "flavor", d.FlavorName)
@@ -68,7 +68,7 @@ func (d *Driver) resolveIDs() error {
 	if d.RootVolumeOpts.SourceID == "" && d.ImageName != "" {
 		imageID, err := d.client.FindImage(d.ImageName)
 		if err != nil {
-			return fmt.Errorf("failed to find image by name: %s", logHttp500(err))
+			return fmt.Errorf("failed to find image by name: %s", logHTTP500(err))
 		}
 		if imageID == "" {
 			return fmt.Errorf(notFound, "image", d.ImageName)
@@ -77,14 +77,14 @@ func (d *Driver) resolveIDs() error {
 	}
 	sgIDs, err := d.client.FindSecurityGroups(d.SecurityGroups)
 	if err != nil {
-		return fmt.Errorf("failed to resolve security group IDs: %s", logHttp500(err))
+		return fmt.Errorf("failed to resolve security group IDs: %s", logHTTP500(err))
 	}
 	d.SecurityGroupIDs = sgIDs
 
 	if d.ServerGroupID == "" && d.ServerGroup != "" {
 		serverGroupID, err := d.client.FindServerGroup(d.ServerGroup)
 		if err != nil {
-			return fmt.Errorf("failed to resolve server group: %s", logHttp500(err))
+			return fmt.Errorf("failed to resolve server group: %s", logHTTP500(err))
 		}
 		d.ServerGroupID = serverGroupID
 	}
@@ -111,31 +111,31 @@ func (d *Driver) checkConfig() error {
 // mergeClouds merges two Config recursively (the AuthInfo also gets merged).
 // In case both Config define a value, the value in the 'cloud' cloud takes precedence
 func mergeClouds(cloud, fallback interface{}) (*openstack.Cloud, error) {
-	overrideJson, err := json.Marshal(fallback)
+	overrideJSON, err := json.Marshal(fallback)
 	if err != nil {
 		return nil, err
 	}
-	cloudJson, err := json.Marshal(cloud)
+	cloudJSON, err := json.Marshal(cloud)
 	if err != nil {
 		return nil, err
 	}
 	var fallbackInterface interface{}
-	err = json.Unmarshal(overrideJson, &fallbackInterface)
+	err = json.Unmarshal(overrideJSON, &fallbackInterface)
 	if err != nil {
 		return nil, err
 	}
 	var cloudInterface interface{}
-	err = json.Unmarshal(cloudJson, &cloudInterface)
+	err = json.Unmarshal(cloudJSON, &cloudInterface)
 	if err != nil {
 		return nil, err
 	}
 	mergedCloud := new(openstack.Cloud)
 	mergedInterface := utils.MergeInterfaces(cloudInterface, fallbackInterface)
-	mergedJson, err := json.Marshal(mergedInterface)
+	mergedJSON, err := json.Marshal(mergedInterface)
 	if err != nil {
 		return nil, err
 	}
-	if err := json.Unmarshal(mergedJson, mergedCloud); err != nil {
+	if err := json.Unmarshal(mergedJSON, mergedCloud); err != nil {
 		return nil, err
 	}
 	return mergedCloud, nil
@@ -145,7 +145,7 @@ func (d *Driver) getUserData() error {
 	if d.UserDataFile == "" || len(d.UserData) != 0 {
 		return nil
 	}
-	userData, err := ioutil.ReadFile(d.UserDataFile)
+	userData, err := os.ReadFile(d.UserDataFile)
 	if err != nil {
 		return fmt.Errorf("failed to load user data file: %s", err)
 	}
