@@ -83,7 +83,6 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 	assert.Equal(t, defaultSubnetName, driver.SubnetName)
 	assert.Equal(t, defaultFlavor, driver.FlavorName)
 	assert.Equal(t, defaultImage, driver.ImageName)
-	assert.Equal(t, defaultRegion, driver.Region)
 	assert.Empty(t, flags.InvalidFlags)
 }
 
@@ -227,10 +226,11 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":       "otc",
-			"otc-subnet-name": subnetName,
-			"otc-vpc-name":    vpcName,
-			"otc-sec-groups":  sg.Name,
+			"otc-cloud":             "otc",
+			"otc-subnet-name":       subnetName,
+			"otc-vpc-name":          vpcName,
+			"otc-sec-groups":        sg.Name,
+			"otc-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -268,11 +268,12 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":            "otc",
-			"otc-subnet-name":      subnetName,
-			"otc-vpc-name":         vpcName,
-			"otc-keypair-name":     kpName,
-			"otc-private-key-file": keyPath,
+			"otc-cloud":             "otc",
+			"otc-subnet-name":       subnetName,
+			"otc-vpc-name":          vpcName,
+			"otc-keypair-name":      kpName,
+			"otc-private-key-file":  keyPath,
+			"otc-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 
@@ -292,10 +293,11 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 func TestDriver_WithoutEIP(t *testing.T) {
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":       "otc",
-			"otc-subnet-name": subnetName,
-			"otc-vpc-name":    vpcName,
-			"otc-skip-eip":    true,
+			"otc-cloud":             "otc",
+			"otc-subnet-name":       subnetName,
+			"otc-vpc-name":          vpcName,
+			"otc-skip-eip":          true,
+			"otc-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -322,8 +324,9 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":          "otc",
-			"otc-user-data-file": fileName,
+			"otc-cloud":             "otc",
+			"otc-user-data-file":    fileName,
+			"otc-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
