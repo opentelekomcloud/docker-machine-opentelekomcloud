@@ -48,7 +48,7 @@ func (d *Driver) initComputeV1() error {
 		return fmt.Errorf("failed to authenticate: %s", logHTTP500(err))
 	}
 	if err := d.client.InitECS(); err != nil {
-		return fmt.Errorf("failed to initialize Compute v2 service: %s", logHTTP500(err))
+		return fmt.Errorf("failed to initialize Compute v1 service: %s", logHTTP500(err))
 	}
 	return nil
 }
