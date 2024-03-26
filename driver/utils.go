@@ -17,7 +17,7 @@ const (
 	dockerPort           = 2376
 	defaultSecurityGroup = "docker-machine-grp"
 	defaultAZ            = "eu-de-01"
-	defaultFlavor        = "s2.large.2"
+	defaultFlavor        = "s3.xlarge.2"
 	defaultImage         = "Standard_Ubuntu_20.04_latest"
 	defaultSSHUser       = "ubuntu"
 	defaultSSHPort       = 22

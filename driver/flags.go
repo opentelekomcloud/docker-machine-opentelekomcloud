@@ -20,7 +20,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-auth-url",
 			EnvVar: "OS_AUTH_URL",
 			Usage:  "OpenTelekomCloud authentication URL",
-			Value:  defaultAuthURL,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-cacert",
@@ -61,7 +60,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-region",
 			EnvVar: "OS_REGION",
 			Usage:  "OpenTelekomCloud region name",
-			Value:  defaultRegion,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-access-key",
@@ -77,7 +75,6 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Name:   "otc-availability-zone",
 			EnvVar: "OS_AVAILABILITY_ZONE",
 			Usage:  "OpenTelekomCloud availability zone",
-			Value:  defaultAZ,
 		},
 		mcnflag.StringFlag{
 			Name:   "otc-flavor-id",

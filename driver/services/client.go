@@ -51,11 +51,7 @@ func (c *Client) Authenticate() error {
 	if c.Provider != nil && c.Provider.Token() != "" {
 		return nil
 	}
-	ao, err := openstack.AuthOptionsFromEnv()
-	if err != nil {
-		return err
-	}
-	providerClient, err := openstack.AuthenticatedClient(ao)
+	providerClient, err := openstack.AuthenticatedClientFromCloud(c.cloud)
 	if err != nil {
 		return err
 	}

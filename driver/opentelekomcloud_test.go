@@ -25,13 +25,21 @@ var (
 	subnetName   = utils.RandomString(15, "subnet-")
 	instanceName = utils.RandomString(15, "machine-")
 	defaultFlags = map[string]interface{}{
-		"otc-cloud":       "otc",
-		"otc-subnet-name": subnetName,
-		"otc-vpc-name":    vpcName,
-		"otc-tags":        "machine,test",
+		"otc-cloud":             "otc",
+		"otc-subnet-name":       subnetName,
+		"otc-vpc-name":          vpcName,
+		"otc-tags":              "machine,test",
+		"otc-availability-zone": defaultAz(),
 	}
 	testEnv = openstack.NewEnv("OS_")
 )
+
+func defaultAz() string {
+	if val := os.Getenv("OS_AVAILABILITY_ZONE"); val != "" {
+		return val
+	}
+	return "eu-de-01"
+}
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 	driver := NewDriver(instanceName, "")
