@@ -23,7 +23,7 @@ vet:
 
 acceptance:
 	@echo "Starting acceptance tests..."
-	@go test ./driver/opentelekomcloud_test.go -race -covermode=atomic -coverprofile=coverage.txt -timeout 20m -v
+	@go test -v -race -covermode=atomic -coverprofile=coverage.txt -timeout 20m ./driver
 
 acceptance-services:
 	@echo "Starting acceptance tests for services..."

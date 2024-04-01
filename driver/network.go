@@ -63,7 +63,6 @@ func (d *Driver) createDefaultGroup() error {
 		services.PortRange{From: dockerEtcdPort},
 		services.PortRange{From: dockerEtcdPeerPort},
 		services.PortRange{From: dockerNodesPort},
-		services.PortRange{From: dockerNodesPort},
 		services.PortRange{From: dockerNginxPort},
 		services.PortRange{From: dockerVXLANPort},
 		services.PortRange{From: dockerProbesPort},
