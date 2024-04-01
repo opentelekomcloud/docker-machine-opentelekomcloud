@@ -25,7 +25,7 @@ var (
 	subnetName   = utils.RandomString(15, "subnet-")
 	instanceName = utils.RandomString(15, "machine-")
 	defaultFlags = map[string]interface{}{
-		"otc-cloud":             "otc",
+		"otc-cloud":             defaultCloud(),
 		"otc-subnet-name":       subnetName,
 		"otc-vpc-name":          vpcName,
 		"otc-tags":              "machine,test",
@@ -39,6 +39,13 @@ func defaultAz() string {
 		return val
 	}
 	return "eu-de-01"
+}
+
+func defaultCloud() string {
+	if val := os.Getenv("OS_CLOUD"); val != "" {
+		return val
+	}
+	return "functest_cloud"
 }
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
