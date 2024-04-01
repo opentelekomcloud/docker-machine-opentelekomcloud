@@ -80,7 +80,7 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 	driver := NewDriver(instanceName, "path")
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
-			"otc-cloud": "otc",
+			"otc-cloud": defaultCloud(),
 		},
 		CreateFlags: driver.GetCreateFlags(),
 	}
@@ -110,6 +110,12 @@ func TestDriver_Auth(t *testing.T) {
 		},
 	}
 	for name, flags := range testFlags {
+		if name == "credentials" && testEnv.GetEnv("USERNAME") == "" && testEnv.GetEnv("PASSWORD") == "" {
+			t.Skip("OS_USERNAME and OS_PASSWORD are required for credentials test")
+		}
+		if name == "ak/sk" && testEnv.GetEnv("ACCESS_KEY") == "" && testEnv.GetEnv("SECRET_KEY") == "" {
+			t.Skip("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+		}
 		t.Run(name, func(sub *testing.T) {
 			_, err := newDriverFromFlags(flags)
 			assert.NoError(sub, err)
@@ -131,8 +137,10 @@ func TestDriver_Create(t *testing.T) {
 			"otc-tags":         "machine,test",
 		},
 	}
-
 	for name, flags := range testFlags {
+		if name == "ak/sk" && testEnv.GetEnv("ACCESS_KEY") == "" && testEnv.GetEnv("SECRET_KEY") == "" {
+			t.Skip("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+		}
 		t.Run(name, func(sub *testing.T) {
 			driver, err := newDriverFromFlags(flags)
 			require.NoError(sub, err)
@@ -233,7 +241,7 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             "otc",
+			"otc-cloud":             defaultCloud(),
 			"otc-subnet-name":       subnetName,
 			"otc-vpc-name":          vpcName,
 			"otc-sec-groups":        sg.Name,
@@ -275,7 +283,7 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             "otc",
+			"otc-cloud":             defaultCloud(),
 			"otc-subnet-name":       subnetName,
 			"otc-vpc-name":          vpcName,
 			"otc-keypair-name":      kpName,
@@ -300,7 +308,7 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 func TestDriver_WithoutEIP(t *testing.T) {
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             "otc",
+			"otc-cloud":             defaultCloud(),
 			"otc-subnet-name":       subnetName,
 			"otc-vpc-name":          vpcName,
 			"otc-skip-eip":          true,
@@ -331,7 +339,7 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             "otc",
+			"otc-cloud":             defaultCloud(),
 			"otc-user-data-file":    fileName,
 			"otc-availability-zone": defaultAz(),
 		})
@@ -355,7 +363,7 @@ func TestDriver_UserDataRaw(t *testing.T) {
 
 	driverFl, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":          "otc",
+			"otc-cloud":          defaultCloud(),
 			"otc-user-data-file": fileName,
 		})
 	require.NoError(t, err)
@@ -363,7 +371,7 @@ func TestDriver_UserDataRaw(t *testing.T) {
 
 	driverRaw, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":         "otc",
+			"otc-cloud":         defaultCloud(),
 			"otc-user-data-raw": string(userData),
 		})
 	require.NoError(t, err)
