@@ -11,22 +11,30 @@ import (
 )
 
 const (
-	errorBothOptions     = "both %s and %s must be specified"
-	notFound             = "%s not found by name `%s`"
-	driverName           = "otc"
-	dockerPort           = 2376
-	defaultSecurityGroup = "docker-machine-grp"
-	defaultAZ            = "eu-de-01"
-	defaultFlavor        = "s3.xlarge.2"
-	defaultImage         = "Standard_Ubuntu_20.04_latest"
-	defaultSSHUser       = "ubuntu"
-	defaultSSHPort       = 22
-	defaultRegion        = "eu-de"
-	defaultAuthURL       = "https://iam.eu-de.otc.t-systems.com/v3"
-	defaultVpcName       = "vpc-docker-machine"
-	defaultSubnetName    = "subnet-docker-machine"
-	defaultVolumeSize    = 40
-	defaultVolumeType    = "SSD"
+	errorBothOptions        = "both %s and %s must be specified"
+	notFound                = "%s not found by name `%s`"
+	driverName              = "otc"
+	dockerPort              = 2376
+	dockerEtcdPort          = 2379
+	dockerEtcdPeerPort      = 2380
+	dockerNodesPort         = 6443
+	dockerNginxPort         = 8443
+	dockerVXLANPort         = 8472
+	dockerProbesPort        = 9099
+	dockerMetricsServerPort = 10250
+	dockerIngressProbesPort = 10254
+	defaultSecurityGroup    = "docker-machine-grp"
+	defaultAZ               = "eu-de-01"
+	defaultFlavor           = "s3.xlarge.2"
+	defaultImage            = "Standard_Ubuntu_20.04_latest"
+	defaultSSHUser          = "ubuntu"
+	defaultSSHPort          = 22
+	defaultRegion           = "eu-de"
+	defaultAuthURL          = "https://iam.eu-de.otc.t-systems.com/v3"
+	defaultVpcName          = "vpc-docker-machine"
+	defaultSubnetName       = "subnet-docker-machine"
+	defaultVolumeSize       = 40
+	defaultVolumeType       = "SSD"
 )
 
 // logHTTP500 appends error message with response 500 body
