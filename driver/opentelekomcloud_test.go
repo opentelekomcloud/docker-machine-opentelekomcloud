@@ -111,10 +111,12 @@ func TestDriver_Auth(t *testing.T) {
 	}
 	for name, flags := range testFlags {
 		if name == "credentials" && testEnv.GetEnv("USERNAME") == "" && testEnv.GetEnv("PASSWORD") == "" {
-			t.Skip("OS_USERNAME and OS_PASSWORD are required for credentials test")
+			t.Log("OS_USERNAME and OS_PASSWORD are required for credentials test")
+			continue
 		}
 		if name == "ak/sk" && testEnv.GetEnv("ACCESS_KEY") == "" && testEnv.GetEnv("SECRET_KEY") == "" {
-			t.Skip("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+			t.Log("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+			continue
 		}
 		t.Run(name, func(sub *testing.T) {
 			_, err := newDriverFromFlags(flags)
@@ -139,7 +141,8 @@ func TestDriver_Create(t *testing.T) {
 	}
 	for name, flags := range testFlags {
 		if name == "ak/sk" && testEnv.GetEnv("ACCESS_KEY") == "" && testEnv.GetEnv("SECRET_KEY") == "" {
-			t.Skip("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+			t.Log("OS_ACCESS_KEY and OS_SECRET_KEY are required for ak/sk test")
+			continue
 		}
 		t.Run(name, func(sub *testing.T) {
 			driver, err := newDriverFromFlags(flags)
