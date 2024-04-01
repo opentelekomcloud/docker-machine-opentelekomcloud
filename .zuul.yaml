@@ -8,15 +8,13 @@
         - otc-golangci-lint
         - golang-make-vet
         - goreleaser-build
-        - golang-make-functional:
-            voting: false
+        - golang-make-functional
     gate:
       jobs:
         - otc-golangci-lint
         - golang-make-vet
         - goreleaser-build
-        - golang-make-functional:
-            voting: false
+        - golang-make-functional
     tag:
       jobs:
         - release-goreleaser
