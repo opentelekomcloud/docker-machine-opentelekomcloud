@@ -28,7 +28,7 @@ var (
 		"otc-cloud":             defaultCloud(),
 		"otc-subnet-name":       subnetName,
 		"otc-vpc-name":          vpcName,
-		"otc-tags":              "machine,test",
+		"otc-tags":              "machine.dmd,test.value,empty",
 		"otc-availability-zone": defaultAz(),
 	}
 	testEnv = openstack.NewEnv("OS_")
@@ -136,7 +136,7 @@ func TestDriver_Create(t *testing.T) {
 			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
 			"otc-subnet-name":  defaultFlags["otc-subnet-name"],
 			"otc-vpc-name":     defaultFlags["otc-vpc-name"],
-			"otc-tags":         "machine,test",
+			"otc-tags":         "machine.dmd,test.value,empty",
 		},
 	}
 	for name, flags := range testFlags {

@@ -1,6 +1,6 @@
 # OpenTelekomCloud Docker Machine driver
 
-[![Zuul Gate](https://zuul.eco.tsi-dev.otc-service.com/api/tenant/eco/badge?project=opentelekomcloud/docker-machine-opentelekomcloud&pipeline=check&branch=devel)](https://zuul.eco.tsi-dev.otc-service.com/t/eco/builds?project=opentelekomcloud%2Fdocker-machine-opentelekomcloud)
+[![Zuul Gate](https://zuul.otc-service.com/api/tenant/eco/badge?project=opentelekomcloud/docker-machine-opentelekomcloud&pipeline=check&branch=devel)](https://zuul.eco.tsi-dev.otc-service.com/t/eco/builds?project=opentelekomcloud%2Fdocker-machine-opentelekomcloud)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud)](https://goreportcard.com/report/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
 ![GitHub](https://img.shields.io/github/license/opentelekomcloud/docker-machine-opentelekomcloud)
 
@@ -28,6 +28,7 @@ There are two more options of docker-machine driver suitable for usage with Open
 | AK/SK auth                                     | Yes         | Yes       | No        |
 | Server group                                   | **Yes**     | No        | No        |
 | Security group(s)                              | Multiple    | Single    | Multiple  |
+| Instance Tags                                  | Multiple    | No        | No        |
 | Rancher integration                            | Needs setup | Built-in  | Built-in  |
 
 ### Installation
