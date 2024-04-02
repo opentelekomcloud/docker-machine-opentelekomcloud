@@ -229,7 +229,7 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 		mcnflag.StringFlag{
 			Name:   "otc-tags",
 			EnvVar: "OS_TAGS",
-			Usage:  "Comma-separated list of instance tags",
+			Usage:  "Comma-separated list of instance tags (e.g. key1.value1,key2.value2,key3)",
 		},
 	}
 }
