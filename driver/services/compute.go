@@ -381,10 +381,7 @@ func (c *Client) FindSecurityGroups(secGroups []string) ([]string, error) {
 // SecurityGroupExist check if security group still exist
 func (c *Client) SecurityGroupExist(id string) bool {
 	err := secgroups.Get(c.ComputeV2, id).Err
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
 
 // DeleteSecurityGroup deletes managed security group
