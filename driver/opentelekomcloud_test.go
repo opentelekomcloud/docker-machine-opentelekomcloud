@@ -238,9 +238,6 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	newSG := utils.RandomString(10, "nsg-")
 	sg, err := preDriver.client.CreateSecurityGroup(newSG, services.PortRange{From: 24})
 	assert.NoError(t, err)
-	defer func() {
-		assert.NoError(t, preDriver.client.DeleteSecurityGroup(sg.ID))
-	}()
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{

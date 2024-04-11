@@ -4,7 +4,7 @@ go 1.14
 
 require (
 	github.com/apparentlymart/go-cidr v1.1.0
-	github.com/docker/docker v20.10.24+incompatible // indirect
+	github.com/docker/docker v20.10.27+incompatible // indirect
 	github.com/docker/machine v0.16.2
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/hashicorp/go-multierror v1.1.0

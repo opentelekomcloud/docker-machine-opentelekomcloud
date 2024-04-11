@@ -168,14 +168,28 @@ func (d *Driver) deleteInstance() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
 	}
+	sGroups, err := d.client.GetInstanceSG(d.InstanceID)
+	if err != nil {
+		return fmt.Errorf("failed to get ECS security groups: %s", err)
+	}
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
 	}
-	err := d.client.WaitForInstanceStatus(d.InstanceID, "")
+	err = d.client.WaitForInstanceStatus(d.InstanceID, "")
 	switch err.(type) {
 	case golangsdk.ErrDefault404:
 	default:
 		return fmt.Errorf("failed to wait for instance status after deletion: %s", logHTTP500(err))
+	}
+	for _, group := range sGroups {
+		if group.Description == services.DefaultSecurityGroupDescription {
+			if err := d.client.DeleteSecurityGroup(group.ID); err != nil {
+				return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
+			}
+			if err := d.client.WaitForGroupDeleted(group.ID); err != nil {
+				return fmt.Errorf("failed to wait for security group status after deletion: %s", logHTTP500(err))
+			}
+		}
 	}
 	return nil
 }

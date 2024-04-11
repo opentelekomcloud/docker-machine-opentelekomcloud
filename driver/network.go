@@ -155,11 +155,13 @@ func (d *Driver) deleteSecGroups() error {
 	if id == "" {
 		return nil
 	}
-	if err := d.client.DeleteSecurityGroup(id); err != nil {
-		return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
-	}
-	if err := d.client.WaitForGroupDeleted(id); err != nil {
-		return fmt.Errorf("failed to wait for security group status after deletion: %s", logHTTP500(err))
+	if d.client.SecurityGroupExist(id) {
+		if err := d.client.DeleteSecurityGroup(id); err != nil {
+			return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
+		}
+		if err := d.client.WaitForGroupDeleted(id); err != nil {
+			return fmt.Errorf("failed to wait for security group status after deletion: %s", logHTTP500(err))
+		}
 	}
 	return nil
 }
