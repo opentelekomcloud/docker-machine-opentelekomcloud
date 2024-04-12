@@ -3,6 +3,7 @@ package opentelekomcloud
 import (
 	"fmt"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 )
@@ -148,6 +149,7 @@ func (d *Driver) deleteSubnet() error {
 }
 
 func (d *Driver) deleteSecGroups() error {
+	mErr := &multierror.Error{}
 	if err := d.initComputeV2(); err != nil {
 		return err
 	}
@@ -155,11 +157,13 @@ func (d *Driver) deleteSecGroups() error {
 	if id == "" {
 		return nil
 	}
-	if err := d.client.DeleteSecurityGroup(id); err != nil {
-		return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
+	if d.client.SecurityGroupExist(id) {
+		if err := d.client.DeleteSecurityGroup(id); err != nil {
+			mErr = multierror.Append(mErr, logHTTP500(err))
+		}
+		if err := d.client.WaitForGroupDeleted(id); err != nil {
+			mErr = multierror.Append(mErr, logHTTP500(err))
+		}
 	}
-	if err := d.client.WaitForGroupDeleted(id); err != nil {
-		return fmt.Errorf("failed to wait for security group status after deletion: %s", logHTTP500(err))
-	}
-	return nil
+	return mErr.ErrorOrNil()
 }

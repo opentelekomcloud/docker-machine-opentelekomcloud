@@ -21,8 +21,9 @@ import (
 
 // Instance statuses
 const (
-	InstanceStatusStopped = "SHUTOFF"
-	InstanceStatusRunning = "ACTIVE"
+	InstanceStatusStopped           = "SHUTOFF"
+	InstanceStatusRunning           = "ACTIVE"
+	DefaultSecurityGroupDescription = "Automatically created by docker-machine for OTC"
 )
 
 // InitCompute initializes Compute v2 service
@@ -139,6 +140,19 @@ func (c *Client) RestartInstance(instanceID string) error {
 // DeleteInstance removes existing ECS instance
 func (c *Client) DeleteInstance(instanceID string) error {
 	return servers.Delete(c.ComputeV2, instanceID).Err
+}
+
+// GetInstanceSG get details of ECS instance security groups
+func (c *Client) GetInstanceSG(instanceID string) ([]secgroups.SecurityGroup, error) {
+	allPages, err := secgroups.ListByServer(c.ComputeV2, instanceID).AllPages()
+	if err != nil {
+		return nil, err
+	}
+	securityGroups, err := secgroups.ExtractSecurityGroups(allPages)
+	if err != nil {
+		return nil, err
+	}
+	return securityGroups, nil
 }
 
 // FindInstance returns instance ID by instance Name
@@ -306,7 +320,7 @@ type PortRange struct {
 func (c *Client) CreateSecurityGroup(securityGroupName string, ports ...PortRange) (*secgroups.SecurityGroup, error) {
 	opts := secgroups.CreateOpts{
 		Name:        securityGroupName,
-		Description: "Automatically created by docker-machine for OTC",
+		Description: DefaultSecurityGroupDescription,
 	}
 	sg, err := secgroups.Create(c.ComputeV2, opts).Extract()
 	if err != nil {
@@ -362,6 +376,12 @@ func (c *Client) FindSecurityGroups(secGroups []string) ([]string, error) {
 		return secGroupIDs, fmt.Errorf("some security groups failed to be found: %v", groupsMess)
 	}
 	return secGroupIDs, nil
+}
+
+// SecurityGroupExist check if security group still exist
+func (c *Client) SecurityGroupExist(id string) bool {
+	err := secgroups.Get(c.ComputeV2, id).Err
+	return err == nil
 }
 
 // DeleteSecurityGroup deletes managed security group
