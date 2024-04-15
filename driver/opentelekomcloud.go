@@ -213,35 +213,35 @@ func (d *Driver) Stop() error {
 
 // Remove the server
 func (d *Driver) Remove() error {
-	var errs error
+	mErr := &multierror.Error{}
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
 	if err := d.deleteInstance(); err != nil {
-		errs = multierror.Append(errs, err)
+		mErr = multierror.Append(mErr, err)
 	}
 	if d.KeyPairName.DriverManaged {
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
+			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
 		}
 	}
 	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
 		if err := d.client.ReleaseEIP(eips.ListOpts{
 			PublicAddress: d.ElasticIP.Value,
 		}); err != nil {
-			errs = multierror.Append(errs, fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err)))
+			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err)))
 		}
 	}
 	if err := d.deleteSubnet(); err != nil {
-		errs = multierror.Append(errs, err)
+		mErr = multierror.Append(mErr, err)
 	}
 	if err := d.deleteSecGroups(); err != nil {
-		errs = multierror.Append(errs, err)
+		mErr = multierror.Append(mErr, err)
 	}
 	if err := d.deleteVPC(); err != nil {
-		errs = multierror.Append(errs, err)
+		mErr = multierror.Append(mErr, err)
 	}
-	return errs
+	return mErr.ErrorOrNil()
 }
 
 // Restart the server

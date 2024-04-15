@@ -10,6 +10,7 @@ import (
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
 
 func (d *Driver) initCompute() error {
@@ -172,6 +173,11 @@ func (d *Driver) deleteInstance() error {
 	if err != nil {
 		return fmt.Errorf("failed to get ECS security groups: %s", err)
 	}
+	elasticIP, err := d.client.GetServerEIP(d.InstanceID)
+	if err != nil {
+		return fmt.Errorf("failed to get ECS elastic ip: %s", err)
+	}
+
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
 	}
@@ -190,6 +196,14 @@ func (d *Driver) deleteInstance() error {
 				return fmt.Errorf("failed to wait for security group status after deletion: %s", logHTTP500(err))
 			}
 		}
+	}
+	if d.ElasticIP.DriverManaged && elasticIP != "" {
+		if err := d.client.ReleaseEIP(eips.ListOpts{
+			PublicAddress: elasticIP,
+		}); err != nil {
+			return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
+		}
+		d.ElasticIP.Value = ""
 	}
 	return nil
 }

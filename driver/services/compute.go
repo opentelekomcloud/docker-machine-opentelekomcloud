@@ -481,3 +481,21 @@ func (c *Client) CreateServerGroup(opts *servergroups.CreateOpts) (*servergroups
 func (c *Client) DeleteServerGroup(id string) error {
 	return servergroups.Delete(c.ComputeV2, id).Err
 }
+
+// GetServerEIP - get floating ip by instance ID
+func (c *Client) GetServerEIP(id string) (string, error) {
+	server, err := servers.Get(c.ComputeV2, id).Extract()
+	if err != nil {
+		return "", err
+	}
+	floatingIp := ""
+	for _, ips := range server.Addresses {
+		for _, ip := range ips.([]interface{}) {
+			address := ip.(map[string]interface{})
+			if address["OS-EXT-IPS:type"] == "floating" {
+				floatingIp = address["addr"].(string)
+			}
+		}
+	}
+	return floatingIp, nil
+}
