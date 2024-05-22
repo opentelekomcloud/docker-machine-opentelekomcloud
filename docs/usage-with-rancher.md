@@ -1,6 +1,6 @@
 ## Usage With Rancher
 
-Currently, `docker-machine-opentelekomcloud` is not a part of the Rancher, so additional steps required to use it as a node driver.
+> !Important note: The current available `docker-machine-opentelekomcloud` is not a part of the Rancher. You need to update the Driver to the latest version to get this properly running. We have an open issue to get this fixed @Rancher, but the approval is currently missing.
 
 ### Remove old node driver:
 
