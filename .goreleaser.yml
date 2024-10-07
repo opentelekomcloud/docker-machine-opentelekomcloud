@@ -1,5 +1,6 @@
 # Visit https://goreleaser.com for documentation on how to customize this
 # behavior.
+version: 2
 project_name: docker-machine-driver-otc
 before:
   hooks:
@@ -67,4 +68,4 @@ release:
     owner: opentelekomcloud
     name: docker-machine-opentelekomcloud
 changelog:
-  skip: true
+  disable: true
