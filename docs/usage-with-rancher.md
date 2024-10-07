@@ -2,6 +2,9 @@
 
 > !Important note: The current available `docker-machine-opentelekomcloud` is not a part of the Rancher. You need to update the Driver to the latest version to get this properly running. We have an open issue to get this fixed @Rancher, but the approval is currently missing.
 
+### Requirements
+- [Rancher]([https://www.terraform.io/downloads.html](https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade)) v2.7.x+
+
 ### Remove old node driver:
 
  * Open Rancher UI page and go to `Tools` → `Drivers` → `Node Drivers`.
