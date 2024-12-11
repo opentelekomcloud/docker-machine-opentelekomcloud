@@ -11,5 +11,5 @@ require (
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/opentelekomcloud/gophertelekomcloud v0.9.2-0.20240321092128-d52d70e6d550
 	github.com/stretchr/testify v1.7.1
-	golang.org/x/crypto v0.17.0
+	golang.org/x/crypto v0.31.0
 )
