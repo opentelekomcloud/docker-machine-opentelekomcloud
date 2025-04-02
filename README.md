@@ -11,7 +11,6 @@ OpenTelekomCloud driver for docker-machine
 There are two more options of docker-machine driver suitable for usage with OpenTelekomCloud:
 
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
-* [DockerMachine4OTC](https://github.com/Huawei/DockerMachineDriver4OTC) ― older OTC driver implementation by Huawei
 
 | Feature                                        | OTC (new)   | OTC (old) | Openstack |
 |------------------------------------------------|-------------|-----------|-----------|
