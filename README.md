@@ -8,27 +8,27 @@ OpenTelekomCloud driver for docker-machine
 
 ### Comparing with other drivers
 
-There are two more options of docker-machine driver suitable for usage with OpenTelekomCloud:
+There is another option of docker-machine driver suitable for usage with OpenTelekomCloud:
 
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 
-| Feature                                        | OTC (new)   | OTC (old) | Openstack |
-|------------------------------------------------|-------------|-----------|-----------|
-| Automated creation of required infrastructure  | **Yes**     | No        | No        |
-| Support of `clouds.yaml` and `OS_CLOUD`        | **Yes**     | No        | No        |
-| Support using of resource names instead of IDs | Yes         | No        | Yes       |
-| User data injection                            | Yes         | No        | Yes       |
-| Elastic (floating) IP pool selection           | No          | No        | Yes       |
-| Custom CA usage                                | Yes         | No        | Yes       |
-| Insecure mode (without TLS certificate check)  | No          | No        | Yes       |
-| Bandwidth configuration                        | Yes         | Yes       | No        |
-| Root volume configuration                      | Yes         | Yes       | No        |
-| Optional usage of elastic IP                   | Yes         | Yes       | No        |
-| AK/SK auth                                     | Yes         | Yes       | No        |
-| Server group                                   | **Yes**     | No        | No        |
-| Security group(s)                              | Multiple    | Single    | Multiple  |
-| Instance Tags                                  | Multiple    | No        | No        |
-| Rancher integration                            | Needs setup | Built-in  | Built-in  |
+| Feature                                        | OTC         | Openstack |
+|------------------------------------------------|-------------|-----------|
+| Automated creation of required infrastructure  | **Yes**     | No        |
+| Support of `clouds.yaml` and `OS_CLOUD`        | **Yes**     | No        |
+| Support using of resource names instead of IDs | Yes         | Yes       |
+| User data injection                            | Yes         | Yes       |
+| Elastic (floating) IP pool selection           | No          | Yes       |
+| Custom CA usage                                | Yes         | Yes       |
+| Insecure mode (without TLS certificate check)  | No          | Yes       |
+| Bandwidth configuration                        | Yes         | No        |
+| Root volume configuration                      | Yes         | No        |
+| Optional usage of elastic IP                   | Yes         | No        |
+| AK/SK auth                                     | Yes         | No        |
+| Server group                                   | **Yes**     | No        |
+| Security group(s)                              | Multiple    | Multiple  |
+| Instance Tags                                  | Multiple    | No        |
+| Rancher integration                            | Needs setup | Built-in  |
 
 ### Installation
 
