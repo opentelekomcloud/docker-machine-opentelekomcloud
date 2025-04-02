@@ -8,7 +8,7 @@ OpenTelekomCloud driver for docker-machine
 
 ### Comparing with other drivers
 
-There are two more options of docker-machine driver suitable for usage with OpenTelekomCloud:
+There are is another option of docker-machine driver suitable for usage with OpenTelekomCloud:
 
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 
