@@ -67,6 +67,56 @@ type Driver struct {
 	client         *services.Client
 }
 
+func (d *Driver) PreCreateCheck() error {
+	// Basic field validation first (these are the minimums you really need)
+	if d.Region == "" {
+		return fmt.Errorf("region is required (try --otc-region or set OS_REGION_NAME)")
+	}
+	// Require exactly one auth path: either AK/SK or Username/Password/Domain
+	hasAKSK := d.AccessKey != "" && d.SecretKey != ""
+	hasUP := d.Username != "" && d.Password != "" && (d.DomainName != "" || d.DomainID != "")
+	hasTok := d.Token != ""
+
+	if !(hasAKSK || hasUP || hasTok) {
+		return fmt.Errorf("at least one authorization method must be provided (AK/SK, Username/Password(+Domain), or Token)")
+	}
+
+	// Try a cheap read to validate auth/region/endpoint right away
+	if err := d.Authenticate(); err != nil {
+		return err
+	}
+
+	// Validate commonly-misconfigured resources early:
+	// - image (by name or id)
+	// - flavor (by name or id)
+	// - VPC/Subnet (if supplied)
+	if err := d.initCompute(); err != nil {
+		return err
+	}
+	if err := d.initImage(); err != nil {
+		return err
+	}
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if err := d.resolveIDs(); err != nil {
+		return fmt.Errorf("failed to resolve resource IDs: %s", logHTTP500(err))
+	}
+
+	// If user picked "skip default SG", still make sure at least one SG will exist
+	if len(d.SecurityGroups) == 0 && d.ManagedSecurityGroup == "" {
+		return fmt.Errorf("no security groups specified; either pass --otc-sec-groups or omit --otc-skip-default-sg")
+	}
+
+	// Validate EIP cfg if not skipping
+	if !d.skipEIPCreation && d.eipConfig != nil {
+		if d.eipConfig.BandwidthSize <= 0 {
+			return fmt.Errorf("bandwidth size must be > 0")
+		}
+	}
+	return nil
+}
+
 // resCreateErr wraps errors happening in createResources
 func resCreateErr(orig error) error {
 	if orig != nil {
@@ -124,7 +174,20 @@ func (d *Driver) Authenticate() error {
 			Token:       d.Token,
 		},
 	}
-	// we don't need domain for project-level AK/SK auth
+	// Only merge with clouds.yaml if the user explicitly asked for a named cloud.
+	if d.Cloud != "" {
+		defaultCloud, err := openstack.NewEnv("OS_").Cloud(d.Cloud)
+		if err != nil {
+			return fmt.Errorf("failed to load default cloud configuration for '%s'", d.Cloud)
+		}
+		merged, err := mergeClouds(cloud, defaultCloud)
+		if err != nil {
+			log.Errorf("unable to merge cloud with defaults")
+		} else {
+			cloud = merged
+		}
+	}
+
 	if d.AccessKey != "" {
 		cloud.AuthInfo.DomainName = ""
 		cloud.AuthInfo.DomainID = ""
