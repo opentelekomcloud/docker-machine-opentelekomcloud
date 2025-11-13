@@ -9,6 +9,7 @@ import (
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/common/pointerto"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
@@ -90,7 +91,7 @@ func (d *Driver) createInstance() error {
 			Size:       d.RootVolumeOpts.Size,
 		},
 		SecurityGroups:   secGroups,
-		AvailabilityZone: d.AvailabilityZone,
+		AvailabilityZone: pointerto.String(d.AvailabilityZone),
 		SchedulerHints: &cloudservers.SchedulerHints{
 			Group: d.ServerGroupID,
 		},

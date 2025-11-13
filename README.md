@@ -72,7 +72,7 @@ $ docker-machine create -d otc --otc-cloud otc default
 **Machine with following setup will be started:**
 
 - **Flavor:** `s3.xlarge.2`
-- **Image:** `Standard_Ubuntu_20.04_latest`
+- **Image:** `Standard_Ubuntu_24.04_amd64_uefi_latest`
 - **Volume Size:** `40` GB
 - **Volume Type:** `SSD`
 

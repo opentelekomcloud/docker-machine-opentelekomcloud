@@ -13,7 +13,7 @@ import (
 const (
 	errorBothOptions        = "both %s and %s must be specified"
 	notFound                = "%s not found by name `%s`"
-	driverName              = "otc"
+	driverName              = "opentelekomcloud"
 	dockerPort              = 2376
 	dockerEtcdPort          = 2379
 	dockerEtcdPeerPort      = 2380
@@ -26,7 +26,7 @@ const (
 	defaultSecurityGroup    = "docker-machine-grp"
 	defaultAZ               = "eu-de-01"
 	defaultFlavor           = "s3.xlarge.2"
-	defaultImage            = "Standard_Ubuntu_20.04_latest"
+	defaultImage            = "Standard_Ubuntu_24.04_amd64_uefi_latest"
 	defaultSSHUser          = "ubuntu"
 	defaultSSHPort          = 22
 	defaultRegion           = "eu-de"
@@ -111,7 +111,7 @@ func (d *Driver) checkConfig() error {
 		return fmt.Errorf("at least one authorization method must be provided")
 	}
 	if len(d.UserData) > 0 && d.UserDataFile != "" {
-		return fmt.Errorf("both `-otc-user-data` and `-otc-user-data-file` is defined")
+		return fmt.Errorf("both `-opentelekomcloud-user-data-raw` and `-opentelekomcloud-user-data-file` is defined")
 	}
 	return nil
 }

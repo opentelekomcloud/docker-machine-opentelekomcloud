@@ -499,3 +499,20 @@ func (c *Client) GetServerEIP(id string) (string, error) {
 	}
 	return floatingIp, nil
 }
+
+func (c *Client) GetServerFixedIP(id string) (string, error) {
+	server, err := servers.Get(c.ComputeV2, id).Extract()
+	if err != nil {
+		return "", err
+	}
+	floatingIp := ""
+	for _, ips := range server.Addresses {
+		for _, ip := range ips.([]interface{}) {
+			address := ip.(map[string]interface{})
+			if address["OS-EXT-IPS:type"] == "fixed" {
+				floatingIp = address["addr"].(string)
+			}
+		}
+	}
+	return floatingIp, nil
+}

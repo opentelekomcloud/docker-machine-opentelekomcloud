@@ -51,7 +51,34 @@ func (c *Client) Authenticate() error {
 	if c.Provider != nil && c.Provider.Token() != "" {
 		return nil
 	}
-	providerClient, err := openstack.AuthenticatedClientFromCloud(c.cloud)
+
+	var (
+		ao  golangsdk.AuthOptions
+		err error
+	)
+
+	if c.cloud != nil {
+		ai := c.cloud.AuthInfo
+		ao = golangsdk.AuthOptions{
+			IdentityEndpoint: ai.AuthURL,
+			Username:         ai.Username,
+			Password:         ai.Password,
+			DomainName:       ai.DomainName,
+			DomainID:         ai.DomainID,
+			TenantName:       ai.ProjectName,
+			TenantID:         ai.ProjectID,
+			TokenID:          ai.Token,
+			AllowReauth:      true,
+		}
+	} else {
+		// Fallback to environment-based auth if no Cloud is provided.
+		ao, err = openstack.AuthOptionsFromEnv()
+		if err != nil {
+			return err
+		}
+	}
+
+	providerClient, err := openstack.AuthenticatedClient(ao)
 	if err != nil {
 		return err
 	}

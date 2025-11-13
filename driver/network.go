@@ -91,6 +91,7 @@ func (d *Driver) createElasticIP() error {
 	if err := d.client.BindFloatingIP(d.ElasticIP.Value, d.InstanceID); err != nil {
 		return fmt.Errorf("failed to bind elastic IP: %s", logHTTP500(err))
 	}
+	d.IPAddress = d.ElasticIP.Value
 	return nil
 }
 
@@ -107,6 +108,7 @@ func (d *Driver) useLocalIP() error {
 		}
 		return nil
 	}
+	d.IPAddress = d.ElasticIP.Value
 	return nil
 }
 

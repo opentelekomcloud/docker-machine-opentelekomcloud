@@ -3,7 +3,10 @@ package opentelekomcloud
 import (
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
@@ -70,7 +73,7 @@ type Driver struct {
 func (d *Driver) PreCreateCheck() error {
 	// Basic field validation first (these are the minimums you really need)
 	if d.Region == "" {
-		return fmt.Errorf("region is required (try --otc-region or set OS_REGION_NAME)")
+		return fmt.Errorf("region is required (try --opentelekomcloud-region or set OS_REGION_NAME)")
 	}
 	// Require exactly one auth path: either AK/SK or Username/Password/Domain
 	hasAKSK := d.AccessKey != "" && d.SecretKey != ""
@@ -81,15 +84,9 @@ func (d *Driver) PreCreateCheck() error {
 		return fmt.Errorf("at least one authorization method must be provided (AK/SK, Username/Password(+Domain), or Token)")
 	}
 
-	// Try a cheap read to validate auth/region/endpoint right away
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
-
-	// Validate commonly-misconfigured resources early:
-	// - image (by name or id)
-	// - flavor (by name or id)
-	// - VPC/Subnet (if supplied)
 	if err := d.initCompute(); err != nil {
 		return err
 	}
@@ -103,17 +100,29 @@ func (d *Driver) PreCreateCheck() error {
 		return fmt.Errorf("failed to resolve resource IDs: %s", logHTTP500(err))
 	}
 
-	// If user picked "skip default SG", still make sure at least one SG will exist
 	if len(d.SecurityGroups) == 0 && d.ManagedSecurityGroup == "" {
-		return fmt.Errorf("no security groups specified; either pass --otc-sec-groups or omit --otc-skip-default-sg")
+		return fmt.Errorf("no security groups specified; either pass --opentelekomcloud-sec-groups or omit --opentelekomcloud-skip-default-sg")
 	}
-
-	// Validate EIP cfg if not skipping
 	if !d.skipEIPCreation && d.eipConfig != nil {
 		if d.eipConfig.BandwidthSize <= 0 {
 			return fmt.Errorf("bandwidth size must be > 0")
 		}
 	}
+
+	if strings.HasPrefix(d.PrivateKeyFile, "-----BEGIN") ||
+		strings.Contains(d.PrivateKeyFile, "PRIVATE KEY") {
+		f, err := os.CreateTemp("", "otc-key-*.pem")
+		if err != nil {
+			return fmt.Errorf("unable to create temp private key file: %w", err)
+		}
+		defer f.Close()
+
+		if _, err := f.Write([]byte(d.PrivateKeyFile)); err != nil {
+			return fmt.Errorf("unable to write private key to temp file: %w", err)
+		}
+		d.PrivateKeyFile = f.Name()
+	}
+
 	return nil
 }
 
@@ -243,6 +252,29 @@ func (d *Driver) Create() error {
 			return err
 		}
 	}
+	if err := d.lookForIPAddress(); err != nil {
+		return d.failedToCreate(err)
+	}
+	return nil
+}
+
+func (d *Driver) failedToCreate(err error) error {
+	if e := d.Remove(); e != nil {
+		return fmt.Errorf("%v: %v", err, e)
+	}
+	return err
+}
+
+func (d *Driver) lookForIPAddress() error {
+	ip, err := d.GetIP()
+	if err != nil {
+		return err
+	}
+	d.IPAddress = ip
+	log.Debug("IP address found", map[string]string{
+		"IP":        ip,
+		"MachineId": d.InstanceID,
+	})
 	return nil
 }
 
@@ -359,10 +391,32 @@ func (d *Driver) GetSSHUsername() string {
 	return d.SSHUser
 }
 
-// GetIP - get ssh ip
 func (d *Driver) GetIP() (string, error) {
-	d.IPAddress = d.ElasticIP.Value
-	return d.BaseDriver.GetIP()
+	if d.IPAddress != "" {
+		return d.IPAddress, nil
+	}
+
+	log.Debug("Looking for the IP address...", map[string]string{"MachineId": d.InstanceID})
+
+	if err := d.initCompute(); err != nil {
+		return "", err
+	}
+
+	for retryCount := 0; retryCount < 5; retryCount++ {
+		if d.skipEIPCreation {
+			ip, err := d.client.GetServerFixedIP(d.InstanceID)
+			if err == nil {
+				return ip, nil
+			}
+		} else {
+			ip, err := d.client.GetServerEIP(d.InstanceID)
+			if err == nil {
+				return ip, nil
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return "", fmt.Errorf("no IP found for the machine")
 }
 
 // GetURL - get ssh url
