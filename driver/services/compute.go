@@ -488,31 +488,32 @@ func (c *Client) GetServerEIP(id string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	floatingIp := ""
+	floatingIP := ""
 	for _, ips := range server.Addresses {
 		for _, ip := range ips.([]interface{}) {
 			address := ip.(map[string]interface{})
 			if address["OS-EXT-IPS:type"] == "floating" {
-				floatingIp = address["addr"].(string)
+				floatingIP = address["addr"].(string)
 			}
 		}
 	}
-	return floatingIp, nil
+	return floatingIP, nil
 }
 
+// GetServerFixedIP - get fixed ip by instance ID
 func (c *Client) GetServerFixedIP(id string) (string, error) {
 	server, err := servers.Get(c.ComputeV2, id).Extract()
 	if err != nil {
 		return "", err
 	}
-	floatingIp := ""
+	floatingIP := ""
 	for _, ips := range server.Addresses {
 		for _, ip := range ips.([]interface{}) {
 			address := ip.(map[string]interface{})
 			if address["OS-EXT-IPS:type"] == "fixed" {
-				floatingIp = address["addr"].(string)
+				floatingIP = address["addr"].(string)
 			}
 		}
 	}
-	return floatingIp, nil
+	return floatingIP, nil
 }

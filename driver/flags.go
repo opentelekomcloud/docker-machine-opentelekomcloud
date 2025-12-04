@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/docker/machine/libmachine/drivers"
+	"github.com/docker/machine/libmachine/log"
 	"github.com/docker/machine/libmachine/mcnflag"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
-	log "github.com/sirupsen/logrus"
 )
 
 // GetCreateFlags - DMD flags

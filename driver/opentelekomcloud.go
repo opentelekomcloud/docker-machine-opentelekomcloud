@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
 
 type managedSting struct {
@@ -70,6 +69,7 @@ type Driver struct {
 	client         *services.Client
 }
 
+// PreCreateCheck pre-creation checks before resources creation
 func (d *Driver) PreCreateCheck() error {
 	// Basic field validation first (these are the minimums you really need)
 	if d.Region == "" {
@@ -312,21 +312,38 @@ func (d *Driver) Remove() error {
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
+
+	log.Debug("deleting instance...", map[string]string{"MachineId": d.InstanceID})
+	log.Info("deleting OpenTelekomCloud instance...")
+
+	if err := d.resolveIDs(); err != nil {
+		return err
+	}
+
+	if !d.skipEIPCreation && d.IPAddress != "" {
+		floatingIP, err := d.client.GetServerEIP(d.IPAddress)
+		if err != nil {
+			return err
+		}
+
+		if floatingIP != "" {
+			log.Debug("deleting Floating IP: ", map[string]string{"floatingIP": floatingIP})
+			if err := d.client.DeleteFloatingIP(floatingIP); err != nil {
+				return err
+			}
+		}
+	}
+
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
 	if d.KeyPairName.DriverManaged {
+		log.Debug("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
 			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
 		}
 	}
-	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
-		if err := d.client.ReleaseEIP(eips.ListOpts{
-			PublicAddress: d.ElasticIP.Value,
-		}); err != nil {
-			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err)))
-		}
-	}
+
 	if err := d.deleteSubnet(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
@@ -391,6 +408,7 @@ func (d *Driver) GetSSHUsername() string {
 	return d.SSHUser
 }
 
+// GetIP - get machine ip address
 func (d *Driver) GetIP() (string, error) {
 	if d.IPAddress != "" {
 		return d.IPAddress, nil
