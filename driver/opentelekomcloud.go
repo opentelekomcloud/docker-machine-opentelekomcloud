@@ -111,7 +111,7 @@ func (d *Driver) PreCreateCheck() error {
 
 	if strings.HasPrefix(d.PrivateKeyFile, "-----BEGIN") ||
 		strings.Contains(d.PrivateKeyFile, "PRIVATE KEY") {
-		f, err := os.CreateTemp("", "otc-key-*.pem")
+		f, err := os.CreateTemp("", "opentelekomcloud-key-*.pem")
 		if err != nil {
 			return fmt.Errorf("unable to create temp private key file: %w", err)
 		}

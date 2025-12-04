@@ -56,10 +56,10 @@ You will have to copy driver to directory in `$PATH` so `docker-machine` would b
 
 `OpenTelekomCloud` driver processes existing `clouds.yaml` files to authenticate in OTC.
 
-Having `otc` cloud in your `clouds.yaml`, creating of docker-machine is as easy as running.
+Having `opentelekomcloud` cloud in your `clouds.yaml`, creating of docker-machine is as easy as running.
 
 ```shell
-$ docker-machine create -d otc --otc-cloud otc default
+$ docker-machine create -d opentelekomcloud --opentelekomcloud-cloud opentelekomcloud default
 ```
 
 **Following will be created if not provided:**
@@ -84,9 +84,14 @@ For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md).
 
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
 
+For versions `v2.0.x` see [supported-options](docs/supported-options-v2.0.x.md).
+
 Please **note** that only `v0.2.x` support old flags and targets to provide full backward compatibility
 with `DockerMachineDriver4OTC`. In versions `v0.3.+` duplicating options were removed and all environment variables are
 prefixed with `OS_`.
+
+Please **note** that only `v2.0.x` support RKE2 cluster installation.
+All variables CLI variables now prefixed with `opentelekomcloud`.
 
 #### With Rancher
 
