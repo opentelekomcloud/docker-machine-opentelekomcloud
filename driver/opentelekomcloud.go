@@ -148,12 +148,15 @@ func (d *Driver) createResources() error {
 	if err := d.resolveIDs(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud vpc...")
 	if err := d.createVPC(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud subnet...")
 	if err := d.createSubnet(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud security group...")
 	if err := d.createDefaultGroup(); err != nil {
 		return resCreateErr(err)
 	}
@@ -236,18 +239,22 @@ func (d *Driver) Create() error {
 			fmt.Sprintf("%s-%s", d.MachineName, mcnutils.GenerateRandomID()),
 			true,
 		}
+		log.Info("creating OpenTelekomCloud ssh key...")
 		if err := d.createSSHKey(); err != nil {
 			return err
 		}
 	}
+	log.Info("creating OpenTelekomCloud instance...")
 	if err := d.createInstance(); err != nil {
 		return err
 	}
 	if d.skipEIPCreation {
+		log.Info("assign to OpenTelekomCloud instance local IP...")
 		if err := d.useLocalIP(); err != nil {
 			return err
 		}
 	} else {
+		log.Info("assign to OpenTelekomCloud instance elastic IP...")
 		if err := d.createElasticIP(); err != nil {
 			return err
 		}
@@ -309,9 +316,6 @@ func (d *Driver) Stop() error {
 // Remove the server
 func (d *Driver) Remove() error {
 	mErr := &multierror.Error{}
-	if err := d.Authenticate(); err != nil {
-		return err
-	}
 
 	log.Debug("deleting instance...", map[string]string{"MachineId": d.InstanceID})
 	log.Info("deleting OpenTelekomCloud instance...")
@@ -321,19 +325,13 @@ func (d *Driver) Remove() error {
 	}
 
 	if !d.skipEIPCreation && d.IPAddress != "" {
-		floatingIP, err := d.client.GetServerEIP(d.IPAddress)
-		if err != nil {
+		log.Debug("deleting Floating IP: ", map[string]string{"floatingIP": d.IPAddress})
+		if err := d.client.DeleteFloatingIP(d.IPAddress); err != nil {
 			return err
-		}
-
-		if floatingIP != "" {
-			log.Debug("deleting Floating IP: ", map[string]string{"floatingIP": floatingIP})
-			if err := d.client.DeleteFloatingIP(floatingIP); err != nil {
-				return err
-			}
 		}
 	}
 
+	log.Info("attempting to delete OpenTelekomCloud instance...")
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
@@ -344,12 +342,17 @@ func (d *Driver) Remove() error {
 		}
 	}
 
+	log.Info("attempting to delete OpenTelekomCloud subnet...")
 	if err := d.deleteSubnet(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	log.Info("attempting to delete OpenTelekomCloud security groups...")
 	if err := d.deleteSecGroups(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	log.Info("attempting to delete OpenTelekomCloud vpc...")
 	if err := d.deleteVPC(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}

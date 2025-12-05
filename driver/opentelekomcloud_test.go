@@ -188,6 +188,8 @@ func cleanupResources(driver *Driver) error {
 			log.Error(err)
 		}
 	}
+
+	log.Debug("InstanceID: ", instanceID)
 	if instanceID != "" {
 		driver.InstanceID = instanceID
 		err := driver.deleteInstance()
