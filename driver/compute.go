@@ -179,6 +179,7 @@ func (d *Driver) deleteInstance() error {
 		return fmt.Errorf("failed to get ECS elastic ip: %s", err)
 	}
 
+	log.Info("deleting OpenTelekomCloud Instance: ", d.InstanceID)
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
 	}
@@ -190,6 +191,7 @@ func (d *Driver) deleteInstance() error {
 	}
 	for _, group := range sGroups {
 		if group.Description == services.DefaultSecurityGroupDescription {
+			log.Info("deleting OpenTelekomCloud Security Group: ", group.ID)
 			if err := d.client.DeleteSecurityGroup(group.ID); err != nil {
 				return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
 			}
@@ -199,6 +201,7 @@ func (d *Driver) deleteInstance() error {
 		}
 	}
 	if d.ElasticIP.DriverManaged && elasticIP != "" {
+		log.Info("deleting OpenTelekomCloud Instance EIP: ", elasticIP)
 		if err := d.client.ReleaseEIP(eips.ListOpts{
 			PublicAddress: elasticIP,
 		}); err != nil {

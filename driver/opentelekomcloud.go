@@ -320,19 +320,12 @@ func (d *Driver) Remove() error {
 	log.Debug("deleting instance...", map[string]string{"MachineId": d.InstanceID})
 	log.Info("deleting OpenTelekomCloud instance...")
 
-	if !d.skipEIPCreation && d.IPAddress != "" {
-		log.Debug("deleting Floating IP: ", map[string]string{"floatingIP": d.IPAddress})
-		if err := d.client.DeleteFloatingIP(d.IPAddress); err != nil {
-			return err
-		}
-	}
-
 	log.Info("attempting to delete OpenTelekomCloud instance...")
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
 	if d.KeyPairName.DriverManaged {
-		log.Debug("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
+		log.Info("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
 			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
 		}
