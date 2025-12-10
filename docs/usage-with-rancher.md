@@ -56,7 +56,7 @@
      active: true
      addCloudCredential: true
      displayName: "OpenTelekomCloud"
-     url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/rke2/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
+     url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/rke2/driver/beta/2.0.0/docker-machine-driver-opentelekomcloud_2.0.0_linux_amd64.tar.gz"
    EOF
 ```
 
