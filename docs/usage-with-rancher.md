@@ -2,8 +2,6 @@
 
 ## RKE1
 
-> !Important note: The current latest `docker-machine-opentelekomcloud` is not a part of the Rancher. You need to update the Driver to the latest version to get this properly running.
-
 ### Requirements
 - [Rancher]([https://www.terraform.io/downloads.html](https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade)) v2.7.x+ -v2.8.x
 
@@ -59,4 +57,3 @@
      url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/rke2/driver/beta/2.0.0/docker-machine-driver-opentelekomcloud_2.0.0_linux_amd64.tar.gz"
    EOF
 ```
-

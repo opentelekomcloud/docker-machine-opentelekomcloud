@@ -14,7 +14,7 @@ const (
 	waitInterval        = 5 * time.Second
 	defaultEndpointType = golangsdk.AvailabilityPublic
 
-	userAgent = "otc-dmd/v2.0"
+	userAgent = "opentelekomcloud-dmd/v2.0"
 )
 
 // Client contains service clients
