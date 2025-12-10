@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/utils"
-	"github.com/opentelekomcloud/gophertelekomcloud"
+	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
@@ -123,7 +123,6 @@ func TestDriver_Auth(t *testing.T) {
 			assert.NoError(sub, err)
 		})
 	}
-
 }
 
 func TestDriver_Create(t *testing.T) {
@@ -270,7 +269,6 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	assert.Contains(t, sgs, driver.ManagedSecurityGroup)
 	assert.Contains(t, sgs, driver.SecurityGroups[0])
 	assert.NoError(t, driver.Remove())
-
 }
 
 func TestDriver_ExistingSSHKey(t *testing.T) {
@@ -408,7 +406,6 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
 	assert.NoError(t, driver.resolveIDs())
 	assert.Equal(t, group.ID, driver.ServerGroupID)
-
 }
 
 func TestDriver_FaultyRemove(t *testing.T) {

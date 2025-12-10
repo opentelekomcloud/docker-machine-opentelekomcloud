@@ -137,7 +137,7 @@ func (d *Driver) loadSSHKey() error {
 }
 
 func (d *Driver) createSSHKey() error {
-	d.KeyPairName.Value = strings.Replace(d.KeyPairName.Value, ".", "_", -1)
+	d.KeyPairName.Value = strings.ReplaceAll(d.KeyPairName.Value, ".", "_")
 	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
 	keyPath := d.GetSSHKeyPath()
 	if err := ssh.GenerateSSHKey(keyPath); err != nil {

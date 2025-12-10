@@ -320,10 +320,6 @@ func (d *Driver) Remove() error {
 	log.Debug("deleting instance...", map[string]string{"MachineId": d.InstanceID})
 	log.Info("deleting OpenTelekomCloud instance...")
 
-	if err := d.resolveIDs(); err != nil {
-		return err
-	}
-
 	if !d.skipEIPCreation && d.IPAddress != "" {
 		log.Debug("deleting Floating IP: ", map[string]string{"floatingIP": d.IPAddress})
 		if err := d.client.DeleteFloatingIP(d.IPAddress); err != nil {
