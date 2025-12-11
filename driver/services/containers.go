@@ -100,7 +100,7 @@ func (c *Client) InitCCE() error {
 }
 
 func (c *Client) getClusterStatus(clusterID string) (string, error) {
-	state, err := clusters.Get(c.CCE, clusterID).Extract()
+	state, err := clusters.Get(c.CCE, clusterID)
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +108,7 @@ func (c *Client) getClusterStatus(clusterID string) (string, error) {
 }
 
 func (c *Client) getNodeStatus(clusterID, nodeIDs string) (string, error) {
-	state, err := nodes.Get(c.CCE, clusterID, nodeIDs).Extract()
+	state, err := nodes.Get(c.CCE, clusterID, nodeIDs)
 	if err != nil {
 		return "", err
 	}
@@ -196,7 +196,7 @@ func (c *Client) CreateCluster(opts *CreateClusterOpts) (*clusters.Clusters, err
 		},
 	}
 
-	create, err := clusters.Create(c.CCE, createOpts).Extract()
+	create, err := clusters.Create(c.CCE, createOpts)
 
 	if err != nil {
 		return nil, fmt.Errorf("error creating OpenTelekomCloud cluster: %s", err)
@@ -210,17 +210,17 @@ func (c *Client) CreateCluster(opts *CreateClusterOpts) (*clusters.Clusters, err
 
 // GetCluster cluster details
 func (c *Client) GetCluster(clusterID string) (*clusters.Clusters, error) {
-	return clusters.Get(c.CCE, clusterID).Extract()
+	return clusters.Get(c.CCE, clusterID)
 }
 
 // GetClusterCertificate cluster certificate
 func (c *Client) GetClusterCertificate(clusterID string) (*clusters.Certificate, error) {
-	return clusters.GetCert(c.CCE, clusterID).Extract()
+	return clusters.GetCert(c.CCE, clusterID)
 }
 
 // DeleteCluster removes cluster
 func (c *Client) DeleteCluster(clusterID string) error {
-	err := clusters.Delete(c.CCE, clusterID).Err
+	err := clusters.Delete(c.CCE, clusterID, clusters.DeleteQueryParams{})
 	if err != nil {
 		return err
 	}
@@ -340,7 +340,7 @@ func (c *Client) CreateNodes(opts *CreateNodesOpts, count int) ([]string, error)
 	if err := c.waitForCluster(clusterID); err != nil {
 		return nil, err
 	}
-	created, err := nodes.Create(c.CCE, clusterID, createOpts).Extract()
+	created, err := nodes.Create(c.CCE, clusterID, createOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -358,7 +358,7 @@ func (c *Client) GetNodesStatus(clusterID string, nodeIDs []string) ([]*nodes.St
 	errChan := make(chan error, len(nodeIDs))
 	for _, nodeID := range nodeIDs {
 		go func(id string) {
-			node, err := nodes.Get(c.CCE, clusterID, id).Extract()
+			node, err := nodes.Get(c.CCE, clusterID, id)
 			if err != nil {
 				errChan <- err
 				nodesChan <- nil
@@ -382,7 +382,7 @@ func (c *Client) DeleteNodes(clusterID string, nodeIDs []string) error {
 	var errChan = make(chan error, len(nodeIDs))
 	for _, nodeID := range nodeIDs {
 		go func(node string) {
-			errChan <- nodes.Delete(c.CCE, clusterID, node).Err
+			errChan <- nodes.Delete(c.CCE, clusterID, node)
 		}(nodeID)
 	}
 	var err *multierror.Error
@@ -396,5 +396,9 @@ func (c *Client) DeleteNodes(clusterID string, nodeIDs []string) error {
 
 // UpdateCluster updates cluster description
 func (c *Client) UpdateCluster(clusterID string, opts *clusters.UpdateSpec) error {
-	return clusters.Update(c.CCE, clusterID, clusters.UpdateOpts{Spec: *opts}).Err
+	_, err := clusters.Update(c.CCE, clusterID, clusters.UpdateOpts{Spec: *opts})
+	if err != nil {
+		return err
+	}
+	return err
 }

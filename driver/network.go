@@ -3,6 +3,7 @@ package opentelekomcloud
 import (
 	"fmt"
 
+	"github.com/docker/machine/libmachine/log"
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
@@ -91,6 +92,7 @@ func (d *Driver) createElasticIP() error {
 	if err := d.client.BindFloatingIP(d.ElasticIP.Value, d.InstanceID); err != nil {
 		return fmt.Errorf("failed to bind elastic IP: %s", logHTTP500(err))
 	}
+	d.IPAddress = d.ElasticIP.Value
 	return nil
 }
 
@@ -107,6 +109,7 @@ func (d *Driver) useLocalIP() error {
 		}
 		return nil
 	}
+	d.IPAddress = d.ElasticIP.Value
 	return nil
 }
 
@@ -115,6 +118,7 @@ func (d *Driver) deleteVPC() error {
 		return err
 	}
 	if d.VpcID.DriverManaged {
+		log.Info("deleting vpc...", map[string]string{"Name": d.VpcName})
 		err := d.client.DeleteVPC(d.VpcID.Value)
 		if err != nil {
 			return fmt.Errorf("failed to delete VPC: %s", logHTTP500(err))
@@ -134,6 +138,7 @@ func (d *Driver) deleteSubnet() error {
 		return err
 	}
 	if d.SubnetID.DriverManaged {
+		log.Info("deleting subnet...", map[string]string{"Name": d.SubnetName})
 		err := d.client.DeleteSubnet(d.VpcID.Value, d.SubnetID.Value)
 		if err != nil {
 			return fmt.Errorf("failed to delete subnet: %s", logHTTP500(err))
@@ -158,6 +163,7 @@ func (d *Driver) deleteSecGroups() error {
 		return nil
 	}
 	if d.client.SecurityGroupExist(id) {
+		log.Info("deleting security group...", map[string]string{"ID": id})
 		if err := d.client.DeleteSecurityGroup(id); err != nil {
 			mErr = multierror.Append(mErr, logHTTP500(err))
 		}

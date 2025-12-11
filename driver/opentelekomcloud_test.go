@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/utils"
-	"github.com/opentelekomcloud/gophertelekomcloud"
+	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/compute/v2/extensions/servergroups"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
@@ -25,11 +25,11 @@ var (
 	subnetName   = utils.RandomString(15, "subnet-")
 	instanceName = utils.RandomString(15, "machine-")
 	defaultFlags = map[string]interface{}{
-		"otc-cloud":             defaultCloud(),
-		"otc-subnet-name":       subnetName,
-		"otc-vpc-name":          vpcName,
-		"otc-tags":              "machine.dmd,test.value,empty",
-		"otc-availability-zone": defaultAz(),
+		"opentelekomcloud-cloud":             defaultCloud(),
+		"opentelekomcloud-subnet-name":       subnetName,
+		"opentelekomcloud-vpc-name":          vpcName,
+		"opentelekomcloud-tags":              "machine.dmd,test.value,empty",
+		"opentelekomcloud-availability-zone": defaultAz(),
 	}
 	testEnv = openstack.NewEnv("OS_")
 )
@@ -80,7 +80,7 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 	driver := NewDriver(instanceName, "path")
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
-			"otc-cloud": defaultCloud(),
+			"opentelekomcloud-cloud": defaultCloud(),
 		},
 		CreateFlags: driver.GetCreateFlags(),
 	}
@@ -97,16 +97,16 @@ func TestDriver_Auth(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,
 		"credentials": {
-			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
-			"otc-username":     testEnv.GetEnv("USERNAME"),
-			"otc-password":     testEnv.GetEnv("PASSWORD"),
+			"opentelekomcloud-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"opentelekomcloud-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"opentelekomcloud-username":     testEnv.GetEnv("USERNAME"),
+			"opentelekomcloud-password":     testEnv.GetEnv("PASSWORD"),
 		},
 		"ak/sk": {
-			"otc-access-key":   testEnv.GetEnv("ACCESS_KEY"),
-			"otc-secret-key":   testEnv.GetEnv("SECRET_KEY"),
-			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"opentelekomcloud-access-key":   testEnv.GetEnv("ACCESS_KEY"),
+			"opentelekomcloud-secret-key":   testEnv.GetEnv("SECRET_KEY"),
+			"opentelekomcloud-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"opentelekomcloud-project-name": testEnv.GetEnv("PROJECT_NAME"),
 		},
 	}
 	for name, flags := range testFlags {
@@ -123,20 +123,19 @@ func TestDriver_Auth(t *testing.T) {
 			assert.NoError(sub, err)
 		})
 	}
-
 }
 
 func TestDriver_Create(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,
 		"ak/sk": {
-			"otc-access-key":   testEnv.GetEnv("ACCESS_KEY"),
-			"otc-secret-key":   testEnv.GetEnv("SECRET_KEY"),
-			"otc-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
-			"otc-project-name": testEnv.GetEnv("PROJECT_NAME"),
-			"otc-subnet-name":  defaultFlags["otc-subnet-name"],
-			"otc-vpc-name":     defaultFlags["otc-vpc-name"],
-			"otc-tags":         "machine.dmd,test.value,empty",
+			"opentelekomcloud-access-key":   testEnv.GetEnv("ACCESS_KEY"),
+			"opentelekomcloud-secret-key":   testEnv.GetEnv("SECRET_KEY"),
+			"opentelekomcloud-domain-name":  testEnv.GetEnv("DOMAIN_NAME"),
+			"opentelekomcloud-project-name": testEnv.GetEnv("PROJECT_NAME"),
+			"opentelekomcloud-subnet-name":  defaultFlags["opentelekomcloud-subnet-name"],
+			"opentelekomcloud-vpc-name":     defaultFlags["opentelekomcloud-vpc-name"],
+			"opentelekomcloud-tags":         "machine.dmd,test.value,empty",
 		},
 	}
 	for name, flags := range testFlags {
@@ -188,6 +187,8 @@ func cleanupResources(driver *Driver) error {
 			log.Error(err)
 		}
 	}
+
+	log.Debug("InstanceID: ", instanceID)
 	if instanceID != "" {
 		driver.InstanceID = instanceID
 		err := driver.deleteInstance()
@@ -241,11 +242,11 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             defaultCloud(),
-			"otc-subnet-name":       subnetName,
-			"otc-vpc-name":          vpcName,
-			"otc-sec-groups":        sg.Name,
-			"otc-availability-zone": defaultAz(),
+			"opentelekomcloud-cloud":             defaultCloud(),
+			"opentelekomcloud-subnet-name":       subnetName,
+			"opentelekomcloud-vpc-name":          vpcName,
+			"opentelekomcloud-sec-groups":        sg.Name,
+			"opentelekomcloud-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -268,7 +269,6 @@ func TestDriver_CreateWithExistingSecGroups(t *testing.T) {
 	assert.Contains(t, sgs, driver.ManagedSecurityGroup)
 	assert.Contains(t, sgs, driver.SecurityGroups[0])
 	assert.NoError(t, driver.Remove())
-
 }
 
 func TestDriver_ExistingSSHKey(t *testing.T) {
@@ -283,12 +283,12 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             defaultCloud(),
-			"otc-subnet-name":       subnetName,
-			"otc-vpc-name":          vpcName,
-			"otc-keypair-name":      kpName,
-			"otc-private-key-file":  keyPath,
-			"otc-availability-zone": defaultAz(),
+			"opentelekomcloud-cloud":             defaultCloud(),
+			"opentelekomcloud-subnet-name":       subnetName,
+			"opentelekomcloud-vpc-name":          vpcName,
+			"opentelekomcloud-keypair-name":      kpName,
+			"opentelekomcloud-private-key-file":  keyPath,
+			"opentelekomcloud-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 
@@ -308,11 +308,11 @@ func TestDriver_ExistingSSHKey(t *testing.T) {
 func TestDriver_WithoutEIP(t *testing.T) {
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             defaultCloud(),
-			"otc-subnet-name":       subnetName,
-			"otc-vpc-name":          vpcName,
-			"otc-skip-eip":          true,
-			"otc-availability-zone": defaultAz(),
+			"opentelekomcloud-cloud":             defaultCloud(),
+			"opentelekomcloud-subnet-name":       subnetName,
+			"opentelekomcloud-vpc-name":          vpcName,
+			"opentelekomcloud-skip-eip":          true,
+			"opentelekomcloud-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -339,9 +339,9 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 
 	driver, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":             defaultCloud(),
-			"otc-user-data-file":    fileName,
-			"otc-availability-zone": defaultAz(),
+			"opentelekomcloud-cloud":             defaultCloud(),
+			"opentelekomcloud-user-data-file":    fileName,
+			"opentelekomcloud-availability-zone": defaultAz(),
 		})
 	require.NoError(t, err)
 	require.NoError(t, driver.initCompute())
@@ -363,16 +363,16 @@ func TestDriver_UserDataRaw(t *testing.T) {
 
 	driverFl, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":          defaultCloud(),
-			"otc-user-data-file": fileName,
+			"opentelekomcloud-cloud":          defaultCloud(),
+			"opentelekomcloud-user-data-file": fileName,
 		})
 	require.NoError(t, err)
 	require.NoError(t, driverFl.getUserData())
 
 	driverRaw, err := newDriverFromFlags(
 		map[string]interface{}{
-			"otc-cloud":         defaultCloud(),
-			"otc-user-data-raw": string(userData),
+			"opentelekomcloud-cloud":         defaultCloud(),
+			"opentelekomcloud-user-data-raw": string(userData),
 		})
 	require.NoError(t, err)
 
@@ -395,10 +395,10 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 
 	flags := &drivers.CheckDriverOptions{
 		FlagsValues: map[string]interface{}{
-			"otc-cloud":        "otc",
-			"otc-subnet-id":    "1234",
-			"otc-vpc-id":       "asdf",
-			"otc-server-group": group.Name,
+			"opentelekomcloud-cloud":        "otc",
+			"opentelekomcloud-subnet-id":    "1234",
+			"opentelekomcloud-vpc-id":       "asdf",
+			"opentelekomcloud-server-group": group.Name,
 		},
 		CreateFlags: driver.GetCreateFlags(),
 	}
@@ -406,7 +406,6 @@ func TestDriver_ResolveServerGroup(t *testing.T) {
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
 	assert.NoError(t, driver.resolveIDs())
 	assert.Equal(t, group.ID, driver.ServerGroupID)
-
 }
 
 func TestDriver_FaultyRemove(t *testing.T) {

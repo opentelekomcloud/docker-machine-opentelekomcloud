@@ -31,7 +31,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"runtime"
 
@@ -124,7 +123,7 @@ func (kp *KeyPair) Fingerprint() string {
 	b, _ := base64.StdEncoding.DecodeString(string(kp.PublicKey))
 	h := md5.New()
 
-	if _, err := io.WriteString(h, string(b)); err != nil {
+	if _, err := h.Write(b); err != nil {
 		fmt.Print("Couldn't write public key")
 	}
 

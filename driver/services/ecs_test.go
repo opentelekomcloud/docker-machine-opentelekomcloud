@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/utils"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/common/pointerto"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -77,7 +78,7 @@ func TestClient_CreateNewECS(t *testing.T) {
 		SecurityGroups: []cloudservers.SecurityGroup{
 			{ID: sg.ID},
 		},
-		AvailabilityZone: defaultAZ,
+		AvailabilityZone: pointerto.String(defaultAZ),
 		ServerTags: []cloudservers.ServerTags{
 			{Key: "by", Value: "dmd"},
 		},

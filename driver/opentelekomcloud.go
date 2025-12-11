@@ -3,7 +3,10 @@ package opentelekomcloud
 import (
 	"fmt"
 	"net"
+	"os"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/docker/machine/libmachine/drivers"
 	"github.com/docker/machine/libmachine/log"
@@ -12,7 +15,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
-	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
 
 type managedSting struct {
@@ -67,6 +69,63 @@ type Driver struct {
 	client         *services.Client
 }
 
+// PreCreateCheck pre-creation checks before resources creation
+func (d *Driver) PreCreateCheck() error {
+	// Basic field validation first (these are the minimums you really need)
+	if d.Region == "" {
+		return fmt.Errorf("region is required (try --opentelekomcloud-region or set OS_REGION_NAME)")
+	}
+	// Require exactly one auth path: either AK/SK or Username/Password/Domain
+	hasAKSK := d.AccessKey != "" && d.SecretKey != ""
+	hasUP := d.Username != "" && d.Password != "" && (d.DomainName != "" || d.DomainID != "")
+	hasTok := d.Token != ""
+
+	if !(hasAKSK || hasUP || hasTok) {
+		return fmt.Errorf("at least one authorization method must be provided (AK/SK, Username/Password(+Domain), or Token)")
+	}
+
+	if err := d.Authenticate(); err != nil {
+		return err
+	}
+	if err := d.initCompute(); err != nil {
+		return err
+	}
+	if err := d.initImage(); err != nil {
+		return err
+	}
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+	if err := d.resolveIDs(); err != nil {
+		return fmt.Errorf("failed to resolve resource IDs: %s", logHTTP500(err))
+	}
+
+	if len(d.SecurityGroups) == 0 && d.ManagedSecurityGroup == "" {
+		return fmt.Errorf("no security groups specified; either pass --opentelekomcloud-sec-groups or omit --opentelekomcloud-skip-default-sg")
+	}
+	if !d.skipEIPCreation && d.eipConfig != nil {
+		if d.eipConfig.BandwidthSize <= 0 {
+			return fmt.Errorf("bandwidth size must be > 0")
+		}
+	}
+
+	if strings.HasPrefix(d.PrivateKeyFile, "-----BEGIN") ||
+		strings.Contains(d.PrivateKeyFile, "PRIVATE KEY") {
+		f, err := os.CreateTemp("", "opentelekomcloud-key-*.pem")
+		if err != nil {
+			return fmt.Errorf("unable to create temp private key file: %w", err)
+		}
+		defer f.Close()
+
+		if _, err := f.Write([]byte(d.PrivateKeyFile)); err != nil {
+			return fmt.Errorf("unable to write private key to temp file: %w", err)
+		}
+		d.PrivateKeyFile = f.Name()
+	}
+
+	return nil
+}
+
 // resCreateErr wraps errors happening in createResources
 func resCreateErr(orig error) error {
 	if orig != nil {
@@ -89,12 +148,15 @@ func (d *Driver) createResources() error {
 	if err := d.resolveIDs(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud vpc...")
 	if err := d.createVPC(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud subnet...")
 	if err := d.createSubnet(); err != nil {
 		return resCreateErr(err)
 	}
+	log.Info("creating OpenTelekomCloud security group...")
 	if err := d.createDefaultGroup(); err != nil {
 		return resCreateErr(err)
 	}
@@ -124,7 +186,20 @@ func (d *Driver) Authenticate() error {
 			Token:       d.Token,
 		},
 	}
-	// we don't need domain for project-level AK/SK auth
+	// Only merge with clouds.yaml if the user explicitly asked for a named cloud.
+	if d.Cloud != "" {
+		defaultCloud, err := openstack.NewEnv("OS_").Cloud(d.Cloud)
+		if err != nil {
+			return fmt.Errorf("failed to load default cloud configuration for '%s'", d.Cloud)
+		}
+		merged, err := mergeClouds(cloud, defaultCloud)
+		if err != nil {
+			log.Errorf("unable to merge cloud with defaults")
+		} else {
+			cloud = merged
+		}
+	}
+
 	if d.AccessKey != "" {
 		cloud.AuthInfo.DomainName = ""
 		cloud.AuthInfo.DomainID = ""
@@ -164,22 +239,49 @@ func (d *Driver) Create() error {
 			fmt.Sprintf("%s-%s", d.MachineName, mcnutils.GenerateRandomID()),
 			true,
 		}
+		log.Info("creating OpenTelekomCloud ssh key...")
 		if err := d.createSSHKey(); err != nil {
 			return err
 		}
 	}
+	log.Info("creating OpenTelekomCloud instance...")
 	if err := d.createInstance(); err != nil {
 		return err
 	}
 	if d.skipEIPCreation {
+		log.Info("assign to OpenTelekomCloud instance local IP...")
 		if err := d.useLocalIP(); err != nil {
 			return err
 		}
 	} else {
+		log.Info("assign to OpenTelekomCloud instance elastic IP...")
 		if err := d.createElasticIP(); err != nil {
 			return err
 		}
 	}
+	if err := d.lookForIPAddress(); err != nil {
+		return d.failedToCreate(err)
+	}
+	return nil
+}
+
+func (d *Driver) failedToCreate(err error) error {
+	if e := d.Remove(); e != nil {
+		return fmt.Errorf("%v: %v", err, e)
+	}
+	return err
+}
+
+func (d *Driver) lookForIPAddress() error {
+	ip, err := d.GetIP()
+	if err != nil {
+		return err
+	}
+	d.IPAddress = ip
+	log.Debug("IP address found", map[string]string{
+		"IP":        ip,
+		"MachineId": d.InstanceID,
+	})
 	return nil
 }
 
@@ -214,30 +316,32 @@ func (d *Driver) Stop() error {
 // Remove the server
 func (d *Driver) Remove() error {
 	mErr := &multierror.Error{}
-	if err := d.Authenticate(); err != nil {
-		return err
-	}
+
+	log.Debug("deleting instance...", map[string]string{"MachineId": d.InstanceID})
+	log.Info("deleting OpenTelekomCloud instance...")
+
+	log.Info("attempting to delete OpenTelekomCloud instance...")
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
 	if d.KeyPairName.DriverManaged {
+		log.Info("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
 			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete key pair: %s", logHTTP500(err)))
 		}
 	}
-	if d.ElasticIP.DriverManaged && d.ElasticIP.Value != "" {
-		if err := d.client.ReleaseEIP(eips.ListOpts{
-			PublicAddress: d.ElasticIP.Value,
-		}); err != nil {
-			mErr = multierror.Append(mErr, fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err)))
-		}
-	}
+
+	log.Info("attempting to delete OpenTelekomCloud subnet...")
 	if err := d.deleteSubnet(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	log.Info("attempting to delete OpenTelekomCloud security groups...")
 	if err := d.deleteSecGroups(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	log.Info("attempting to delete OpenTelekomCloud vpc...")
 	if err := d.deleteVPC(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
@@ -296,10 +400,33 @@ func (d *Driver) GetSSHUsername() string {
 	return d.SSHUser
 }
 
-// GetIP - get ssh ip
+// GetIP - get machine ip address
 func (d *Driver) GetIP() (string, error) {
-	d.IPAddress = d.ElasticIP.Value
-	return d.BaseDriver.GetIP()
+	if d.IPAddress != "" {
+		return d.IPAddress, nil
+	}
+
+	log.Debug("Looking for the IP address...", map[string]string{"MachineId": d.InstanceID})
+
+	if err := d.initCompute(); err != nil {
+		return "", err
+	}
+
+	for retryCount := 0; retryCount < 5; retryCount++ {
+		if d.skipEIPCreation {
+			ip, err := d.client.GetServerFixedIP(d.InstanceID)
+			if err == nil {
+				return ip, nil
+			}
+		} else {
+			ip, err := d.client.GetServerEIP(d.InstanceID)
+			if err == nil {
+				return ip, nil
+			}
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return "", fmt.Errorf("no IP found for the machine")
 }
 
 // GetURL - get ssh url

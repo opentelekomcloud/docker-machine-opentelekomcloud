@@ -9,6 +9,7 @@ import (
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/common/pointerto"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 )
@@ -90,7 +91,7 @@ func (d *Driver) createInstance() error {
 			Size:       d.RootVolumeOpts.Size,
 		},
 		SecurityGroups:   secGroups,
-		AvailabilityZone: d.AvailabilityZone,
+		AvailabilityZone: pointerto.String(d.AvailabilityZone),
 		SchedulerHints: &cloudservers.SchedulerHints{
 			Group: d.ServerGroupID,
 		},
@@ -136,7 +137,7 @@ func (d *Driver) loadSSHKey() error {
 }
 
 func (d *Driver) createSSHKey() error {
-	d.KeyPairName.Value = strings.Replace(d.KeyPairName.Value, ".", "_", -1)
+	d.KeyPairName.Value = strings.ReplaceAll(d.KeyPairName.Value, ".", "_")
 	log.Debug("Creating Key Pair...", map[string]string{"Name": d.KeyPairName.Value})
 	keyPath := d.GetSSHKeyPath()
 	if err := ssh.GenerateSSHKey(keyPath); err != nil {
@@ -178,6 +179,7 @@ func (d *Driver) deleteInstance() error {
 		return fmt.Errorf("failed to get ECS elastic ip: %s", err)
 	}
 
+	log.Info("deleting OpenTelekomCloud Instance: ", d.InstanceID)
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
 	}
@@ -189,6 +191,7 @@ func (d *Driver) deleteInstance() error {
 	}
 	for _, group := range sGroups {
 		if group.Description == services.DefaultSecurityGroupDescription {
+			log.Info("deleting OpenTelekomCloud Security Group: ", group.ID)
 			if err := d.client.DeleteSecurityGroup(group.ID); err != nil {
 				return fmt.Errorf("failed to delete security group: %s", logHTTP500(err))
 			}
@@ -198,6 +201,7 @@ func (d *Driver) deleteInstance() error {
 		}
 	}
 	if d.ElasticIP.DriverManaged && elasticIP != "" {
+		log.Info("deleting OpenTelekomCloud Instance EIP: ", elasticIP)
 		if err := d.client.ReleaseEIP(eips.ListOpts{
 			PublicAddress: elasticIP,
 		}); err != nil {
