@@ -100,6 +100,13 @@ func (d *Driver) PreCreateCheck() error {
 		return fmt.Errorf("failed to resolve resource IDs: %s", logHTTP500(err))
 	}
 
+	// Validate region-sensitive fields (AZ, flavor family) against the
+	// curated RegionProfile. Design decision (hard-error vs warn) lives
+	// inside validateAgainstRegion — see driver/regions.go.
+	if err := d.validateAgainstRegion(); err != nil {
+		return err
+	}
+
 	if len(d.SecurityGroups) == 0 && d.ManagedSecurityGroup == "" {
 		return fmt.Errorf("no security groups specified; either pass --opentelekomcloud-sec-groups or omit --opentelekomcloud-skip-default-sg")
 	}

@@ -319,6 +319,11 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		d.ManagedSecurityGroup = defaultSecurityGroup
 	}
 
+	// Fill region-derived defaults (AuthURL, AvailabilityZone) for any values
+	// the user did not set explicitly. Keeps backwards-compat for eu-de and
+	// makes eu-ch2 (Swiss OTC, `iam-pub.` prefix) work with just --region.
+	d.applyRegionDefaults()
+
 	d.SetSwarmConfigFromFlags(flags)
 	return d.checkConfig()
 }
