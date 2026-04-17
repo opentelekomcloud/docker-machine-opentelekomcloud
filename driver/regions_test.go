@@ -28,15 +28,14 @@ func TestRegionProfileFor_known(t *testing.T) {
 			// A simple substitution pattern does NOT produce this — that's
 			// the entire reason this map exists.
 			//
-			// AZ naming: Swiss OTC uses the same `<region>-NN` convention
-			// as Standard OTC (verified 2026-04-17 against live VMs in
-			// a CCM E2E project — OTC console shows `eu-ch2-01`).
-			// An earlier `eu-ch2a` guess was wrong; OTC silently placed
-			// the VM into a default AZ when passed the unknown name —
-			// a very quiet failure mode.
+			// AZ names: the ECS v1 API accepts `eu-ch2a` / `eu-ch2b`, NOT
+			// `eu-ch2-01` / `eu-ch2-02` (despite what the OTC Console shows).
+			// Verified 2026-04-17 with a failing API call:
+			//   Ecs.0005: "availability_zone=eu-ch2-01 not exist"
+			// See driver/regions.go for the full investigation note.
 			region:      "eu-ch2",
 			wantAuthURL: "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3",
-			wantAZ:      "eu-ch2-01",
+			wantAZ:      "eu-ch2a",
 		},
 	}
 
@@ -75,8 +74,8 @@ func TestSetConfigFromFlags_appliesRegionDefaults(t *testing.T) {
 	assert.Equal(t, "eu-ch2", driver.Region)
 	assert.Equal(t, "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3", driver.AuthURL,
 		"AuthURL must be derived from region profile when not set explicitly")
-	assert.Equal(t, "eu-ch2-01", driver.AvailabilityZone,
-		"AZ default must come from region profile")
+	assert.Equal(t, "eu-ch2a", driver.AvailabilityZone,
+		"AZ default must come from region profile (API name, not console label)")
 }
 
 // TestValidateAgainstRegion exercises the hybrid policy: hard-error on AZ,
@@ -91,8 +90,8 @@ func TestValidateAgainstRegion(t *testing.T) {
 		errorHint string // substring that must appear in the error message
 	}{
 		{
-			name:   "valid eu-ch2 combo",
-			region: "eu-ch2", az: "eu-ch2-01", flavor: "s3.xlarge.2",
+			name:   "valid eu-ch2 combo (API AZ name)",
+			region: "eu-ch2", az: "eu-ch2a", flavor: "s3.xlarge.2",
 			wantError: false,
 		},
 		{
@@ -101,18 +100,18 @@ func TestValidateAgainstRegion(t *testing.T) {
 			wantError: true, errorHint: "availability zone",
 		},
 		{
-			name:   "eu-ch2 with old guess AZ (eu-ch2a) is rejected — regression guard",
-			region: "eu-ch2", az: "eu-ch2a", flavor: "s3.xlarge.2",
+			name: "eu-ch2 with console-style AZ (eu-ch2-01) is rejected — API accepts only eu-ch2a/b",
+			region: "eu-ch2", az: "eu-ch2-01", flavor: "s3.xlarge.2",
 			wantError: true, errorHint: "availability zone",
 		},
 		{
-			name:   "eu-ch2-02 is also a valid AZ",
-			region: "eu-ch2", az: "eu-ch2-02", flavor: "s3.xlarge.2",
+			name:   "eu-ch2b is also a valid AZ",
+			region: "eu-ch2", az: "eu-ch2b", flavor: "s3.xlarge.2",
 			wantError: false,
 		},
 		{
 			name:   "eu-ch2 with wrong flavor family is only warned, not rejected",
-			region: "eu-ch2", az: "eu-ch2-01", flavor: "s2.large.2",
+			region: "eu-ch2", az: "eu-ch2a", flavor: "s2.large.2",
 			wantError: false,
 		},
 		{

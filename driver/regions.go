@@ -52,14 +52,21 @@ var regions = map[string]RegionProfile{
 	"eu-ch2": {
 		Name:    "eu-ch2",
 		AuthURL: "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3",
-		// AZ naming: Swiss OTC uses the `<region>-NN` convention (same as
-		// Standard OTC), not `<region>a/b`. Verified 2026-04-17 against live
-		// VMs in a Swiss OTC project (OTC console shows `eu-ch2-01`). Passing
-		// an unknown AZ name (like our earlier `eu-ch2a` guess) causes OTC
-		// to silently relocate the VM to a default AZ — a very quiet failure
-		// mode. The validator now hard-rejects unknown AZs for this region.
-		AvailabilityZones: []string{"eu-ch2-01", "eu-ch2-02"},
-		DefaultAZ:         "eu-ch2-01",
+		// AZ naming — MISMATCH WARNING:
+		//   The OTC Console displays Swiss AZs as `eu-ch2-01` / `eu-ch2-02`,
+		//   but the ECS v1 API (`POST .../cloudservers`) rejects those names
+		//   with `Ecs.0005: availability_zone=eu-ch2-01 not exist`. The API
+		//   accepts `eu-ch2a` / `eu-ch2b`. Verified 2026-04-17 against
+		//   https://ecs.eu-ch2.sc.otc.t-systems.com in project eu-ch2_wotest:
+		//     - `eu-ch2a`   → VM created successfully
+		//     - `eu-ch2-01` → API 400, "not exist"
+		//   The console display is presumably a zone-label/host-aggregate
+		//   formatted for readability, not the underlying OpenStack AZ.
+		//
+		// If upstream OTC ever unifies the names, update here with a
+		// dated note — do not trust console observation alone.
+		AvailabilityZones: []string{"eu-ch2a", "eu-ch2b"},
+		DefaultAZ:         "eu-ch2a",
 		DefaultFlavor:     "s3.xlarge.2",
 		FlavorFamilies:    []string{"s3."}, // Swiss OTC: only s3-family flavors
 	},
