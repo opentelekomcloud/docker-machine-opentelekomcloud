@@ -95,6 +95,20 @@ Queried the PoC project post-tests. Orphans traceable to our runs:
 
 Conclusion: **SDE-346 is a real resource leak, not a log-only defect**. Manual cleanup commands + analysis in the Jira ticket. See `op-CLI` session output for full IDs.
 
+### Manual-cleanup execution (2026-04-17 late)
+
+All orphans drained from `eu-ch2_wotest`:
+
+- 4 keypairs — `openstack keypair delete` ✅
+- 2 floating IPs — `openstack floating ip delete` ✅
+- 1 security group (`docker-machine-grp`) — `openstack security group delete` ✅
+- 1 subnet (`subnet-docker-machine`) — **Neutron path blocked**; had to call OTC VPC API directly: `DELETE /v1/{project_id}/vpcs/{vpc_id}/subnets/{subnet_id}` ✅
+- 1 VPC (`vpc-docker-machine`) — `DELETE /v1/{project_id}/vpcs/{vpc_id}` ✅
+
+Post-cleanup audit: only `rancher-cce-poc` VPC + its subnet remain in the project (unrelated).
+
+**Useful debug fact for the eventual SDE-346 fix**: OTC's Neutron `subnet delete` refuses to clean DHCP/gateway ports with `device_owner != neutron:VIP_PORT`. The OTC VPC API handles them atomically. The driver already uses the VPC path (`gophertelekomcloud/openstack/networking/v2/extensions/vpcs`), so the bug is elsewhere — refined analysis in SDE-346 comment dated 2026-04-17 22:xx.
+
 ## Rancher integration
 
 | Region | driver registered | credential auth OK | cluster provision | `kubectl get nodes` Ready | workload deploy | cluster delete | OTC resources cleaned up |
