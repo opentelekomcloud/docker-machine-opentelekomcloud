@@ -25,6 +25,9 @@
 # Optional:
 #   MACHINE_NAME        defaults to "smoke-<region>"
 #   OS_IMAGE_NAME       override the driver's default Ubuntu image
+#   OS_SSH_ALLOW_CIDR   CIDR allowed to reach port 22 (SDE-345 fix). Auto-
+#                       detected from https://ifconfig.me/ip if unset and
+#                       reachable.
 #   SKIP_DESTROY        if set (any value), leaves the VM up for inspection
 
 set -euo pipefail
@@ -52,6 +55,20 @@ fi
 
 if [[ "$OS_REGION" == "eu-ch2" && -z "${OS_PROJECT_NAME:-}" ]]; then
   die "Swiss OTC (eu-ch2) requires OS_PROJECT_NAME — unscoped tokens have no service catalog"
+fi
+
+# SDE-345: SSH allow-CIDR for port 22 on the default Security Group.
+# Without this, the VM is port-scanned within seconds of getting an EIP
+# and sshd's MaxStartups queue drops rancher-machine's own probes.
+# Auto-discover this host's public IP if the operator didn't set one.
+if [[ -z "${OS_SSH_ALLOW_CIDR:-}" ]]; then
+  my_ip="$(curl -fsS --max-time 5 https://ifconfig.me/ip 2>/dev/null || true)"
+  if [[ -n "$my_ip" ]]; then
+    OS_SSH_ALLOW_CIDR="${my_ip}/32"
+    echo "(auto-detected OS_SSH_ALLOW_CIDR=${OS_SSH_ALLOW_CIDR})"
+  else
+    echo "WARN: could not auto-detect public IP; falling back to driver default (0.0.0.0/0)"
+  fi
 fi
 
 MACHINE_NAME="${MACHINE_NAME:-smoke-${OS_REGION}}"
@@ -90,6 +107,9 @@ if [[ -n "${OS_PROJECT_NAME:-}" ]]; then
 fi
 if [[ -n "${OS_IMAGE_NAME:-}" ]]; then
   flags+=( --opentelekomcloud-image-name "$OS_IMAGE_NAME" )
+fi
+if [[ -n "${OS_SSH_ALLOW_CIDR:-}" ]]; then
+  flags+=( --opentelekomcloud-ssh-allow-cidr "$OS_SSH_ALLOW_CIDR" )
 fi
 
 echo "=== [3/5] Creating VM '$MACHINE_NAME' in region '$OS_REGION' (project: ${OS_PROJECT_NAME:-<none>}) ==="

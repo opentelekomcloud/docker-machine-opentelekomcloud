@@ -40,6 +40,12 @@ type Driver struct {
 	SecretKey              string       `json:"secret_key,omitempty"`
 	AvailabilityZone       string       `json:"-"`
 	EndpointType           string       `json:"endpoint_type,omitempty"`
+	// SSHAllowCIDR restricts the ingress CIDR for the default Security Group's
+	// port-22 rule. Empty ⇒ keep the legacy hardcoded `0.0.0.0/0` and log a
+	// WARN (backwards-compat). Setting a narrow value (e.g. the operator's
+	// egress /32) prevents the sshd MaxStartups drop attack path that caused
+	// rancher-machine's cloud-init wait to fail — see SDE-345.
+	SSHAllowCIDR           string       `json:"ssh_allow_cidr,omitempty"`
 	InstanceID             string       `json:"instance_id"`
 	FlavorName             string       `json:"-"`
 	FlavorID               string       `json:"-"`

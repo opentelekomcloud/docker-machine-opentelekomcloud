@@ -59,8 +59,23 @@ func (d *Driver) createDefaultGroup() error {
 	if d.ManagedSecurityGroupID != "" || d.ManagedSecurityGroup == "" {
 		return nil
 	}
+
+	// SDE-345: restrict SSH ingress to the operator-provided CIDR when set.
+	// Empty = keep legacy 0.0.0.0/0 (upstream-compatible) but log a LOUD
+	// warning because that default lets brute-force scanners saturate
+	// sshd's MaxStartups queue and drop rancher-machine's own cloud-init
+	// probe (see SDE-345 for the full forensic trail).
+	sshCIDR := d.SSHAllowCIDR
+	if sshCIDR == "" {
+		log.Warnf("Security group port %d (SSH) will accept ingress from 0.0.0.0/0 — " +
+			"public VMs get brute-force scanned within seconds and rancher-machine's own " +
+			"provisioning SSH can get dropped by sshd MaxStartups. " +
+			"Set --opentelekomcloud-ssh-allow-cidr (e.g. <your-ip>/32) to close this window.",
+			d.SSHPort)
+	}
+
 	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup,
-		services.PortRange{From: d.SSHPort},
+		services.PortRange{From: d.SSHPort, CIDR: sshCIDR},
 		services.PortRange{From: dockerPort},
 		services.PortRange{From: dockerEtcdPort},
 		services.PortRange{From: dockerEtcdPeerPort},

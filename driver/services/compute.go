@@ -299,24 +299,33 @@ const (
 	tcpProtocol = "TCP"
 )
 
-func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int) error {
+func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int, cidr string) error {
+	if cidr == "" {
+		cidr = cidrAll
+	}
 	ruleOpts := secgroups.CreateRuleOpts{
 		ParentGroupID: secGroupID,
 		FromPort:      fromPort,
 		ToPort:        toPort,
-		CIDR:          cidrAll,
+		CIDR:          cidr,
 		IPProtocol:    tcpProtocol,
 	}
 	return secgroups.CreateRule(c.ComputeV2, ruleOpts).Err
 }
 
-// PortRange is simple sec rule port range container
+// PortRange is a sec-rule port-range container with an optional ingress CIDR.
+// CIDR empty ⇒ caller accepts the hardcoded 0.0.0.0/0 default (upstream
+// behaviour). Callers that need per-port hardening (e.g. restricting port 22
+// to prevent sshd MaxStartups drops from brute-force scanners — SDE-345)
+// should set a narrow CIDR.
 type PortRange struct {
 	From int
 	To   int
+	CIDR string
 }
 
-// CreateSecurityGroup creates new sec group and returns group ID
+// CreateSecurityGroup creates new sec group and returns group ID.
+// Each PortRange's CIDR (or 0.0.0.0/0 when empty) is applied to that port only.
 func (c *Client) CreateSecurityGroup(securityGroupName string, ports ...PortRange) (*secgroups.SecurityGroup, error) {
 	opts := secgroups.CreateOpts{
 		Name:        securityGroupName,
@@ -330,7 +339,7 @@ func (c *Client) CreateSecurityGroup(securityGroupName string, ports ...PortRang
 		if port.To == 0 {
 			port.To = port.From
 		}
-		if err := c.addInboundRule(sg.ID, port.From, port.To); err != nil {
+		if err := c.addInboundRule(sg.ID, port.From, port.To, port.CIDR); err != nil {
 			return nil, err
 		}
 	}

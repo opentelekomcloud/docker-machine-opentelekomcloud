@@ -152,6 +152,49 @@ func TestValidateAgainstRegion(t *testing.T) {
 }
 
 // TestSetConfigFromFlags_explicit_authURL_wins ensures user overrides are respected.
+// TestSetConfigFromFlags_sshAllowCIDR verifies the SDE-345 fix: the driver
+// captures the --opentelekomcloud-ssh-allow-cidr flag so that createDefaultGroup
+// can restrict port 22 ingress instead of the hardcoded 0.0.0.0/0.
+func TestSetConfigFromFlags_sshAllowCIDR(t *testing.T) {
+	const myCIDR = "203.0.113.42/32"
+
+	driver := NewDriver("test-machine", "")
+
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-region":         "eu-ch2",
+			"opentelekomcloud-access-key":     "dummy",
+			"opentelekomcloud-secret-key":     "dummy",
+			"opentelekomcloud-ssh-allow-cidr": myCIDR,
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+	assert.NoError(t, driver.SetConfigFromFlags(flags))
+
+	assert.Equal(t, myCIDR, driver.SSHAllowCIDR,
+		"--opentelekomcloud-ssh-allow-cidr must be captured on the Driver")
+}
+
+// TestSetConfigFromFlags_sshAllowCIDR_defaultsEmpty documents that when the
+// flag is not provided, we keep the default empty (= caller falls back to
+// 0.0.0.0/0 with a warning). This preserves upstream-compatible behaviour.
+func TestSetConfigFromFlags_sshAllowCIDR_defaultsEmpty(t *testing.T) {
+	driver := NewDriver("test-machine", "")
+
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-region":     "eu-ch2",
+			"opentelekomcloud-access-key": "dummy",
+			"opentelekomcloud-secret-key": "dummy",
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+	assert.NoError(t, driver.SetConfigFromFlags(flags))
+
+	assert.Empty(t, driver.SSHAllowCIDR,
+		"absence of flag must yield empty string, not a silently-defaulted CIDR")
+}
+
 func TestSetConfigFromFlags_explicit_authURL_wins(t *testing.T) {
 	driver := NewDriver("test-machine", "")
 

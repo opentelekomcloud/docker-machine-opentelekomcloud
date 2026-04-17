@@ -207,6 +207,17 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage: "Don't create default security group",
 		},
 		mcnflag.StringFlag{
+			// SDE-345: default SG hardcodes `0.0.0.0/0` for port 22, so
+			// every provisioned VM is instantly brute-forced by scanners,
+			// saturating sshd's MaxStartups queue and dropping rancher-
+			// machine's own cloud-init SSH probe. Empty = keep legacy
+			// `0.0.0.0/0` with a WARN log. Set to e.g. `203.0.113.42/32`
+			// or your Rancher egress CIDR to close the window.
+			Name:   "opentelekomcloud-ssh-allow-cidr",
+			EnvVar: "OS_SSH_ALLOW_CIDR",
+			Usage:  "CIDR allowed to reach port 22 in the default security group (default: 0.0.0.0/0, warned)",
+		},
+		mcnflag.StringFlag{
 			Name:   "opentelekomcloud-server-group",
 			EnvVar: "OS_SERVER_GROUP",
 			Usage:  "Define server group where server will be created",
@@ -253,6 +264,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.SecretKey = flags.String("opentelekomcloud-secret-key")
 
 	d.AvailabilityZone = flags.String("opentelekomcloud-availability-zone")
+	d.SSHAllowCIDR = flags.String("opentelekomcloud-ssh-allow-cidr")
 	d.EndpointType = flags.String("opentelekomcloud-endpoint-type")
 	d.FlavorID = flags.String("opentelekomcloud-flavor-id")
 	d.FlavorName = flags.String("opentelekomcloud-flavor-name")
