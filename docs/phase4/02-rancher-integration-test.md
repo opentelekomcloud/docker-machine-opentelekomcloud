@@ -7,10 +7,18 @@ End-to-end validation: bring a Rancher Manager instance, register this driver + 
 - Rancher Manager 2.9+ (2.10 recommended) reachable in a browser.
 - GitHub release of `rke2-sotc-node-driver` published. The driver binary must be a public HTTPS URL in the form:
   ```
-  https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver/releases/download/v<VERSION>/docker-machine-driver-opentelekomcloud-<OS>-<ARCH>
+  https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver/releases/download/v2.1.0-sotc.2/docker-machine-driver-opentelekomcloud-<OS>-<ARCH>
   ```
   If you have not cut a release yet, see the "Release fast-path" section at the bottom of this doc.
-- UI extension published at `Wolfslight-Forgehouse/rke2-sotc-node-driver-ui` (`main` branch).
+- UI extension published at `Wolfslight-Forgehouse/rke2-sotc-node-driver-ui`, tag [`v1.0.0-sotc.1`](https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver-ui/releases/tag/v1.0.0-sotc.1).
+
+## Compatibility matrix
+
+Pin both components to a tested pair; installing one without the matching other can surface subtle regressions (e.g. the UI sending a flag the driver doesn't parse).
+
+| Driver tag | UI tag | Notes |
+|---|---|---|
+| [`v2.1.0-sotc.2`](https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver/releases/tag/v2.1.0-sotc.2) | [`v1.0.0-sotc.1`](https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver-ui/releases/tag/v1.0.0-sotc.1) | First Swiss-OTC-validated pair. SDE-345/346/388 fixes in driver. |
 
 ## Step 1 — Register the Node Driver
 
@@ -36,7 +44,7 @@ Save and wait for **Active**. If it stays on `Downloading`, check Rancher's logs
 |---|---|
 | Name | `wolfslight-forgehouse-otc` |
 | Git URL | `https://github.com/Wolfslight-Forgehouse/rke2-sotc-node-driver-ui.git` |
-| Git Branch | `main` |
+| Git Branch / Tag | **`v1.0.0-sotc.1`** (pin to a tested tag, don't chase `main`) |
 
 After it indexes, go to **Extensions → Available** and install the OpenTelekomCloud extension.
 
