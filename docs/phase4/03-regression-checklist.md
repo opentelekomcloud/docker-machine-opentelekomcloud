@@ -67,6 +67,34 @@ The real root cause is **public SSH exposure via `0.0.0.0/0:22` SG combined with
 
 Run 3 cleanup also showed the "unexpected EOF after EIP delete" pattern (SDE-346) — reproduced for the second time on an EIP-attached VM.
 
+### Run log — `eu-ch2` run 4 (2026-04-17, `smoke-eu-ch2-v4`)
+
+First run with the SDE-345 fix landed (commit `28faa4c`). Executed via the new automation path:
+
+```
+op run --env-file=docs/phase4/scripts/.env.op -- \
+  docs/phase4/scripts/smoke-test.sh
+```
+
+Smoke script auto-detected `OS_SSH_ALLOW_CIDR=85.195.211.69/32` from `ifconfig.me`.
+
+**SDE-345 fix proof**: `cloud-init status --wait` step passes cleanly. Post-mortem SSH into the VM:
+- `cat /etc/hostname` → `smoke-eu-ch2-v4` (hostname set)
+- `sudo journalctl -u ssh.service | grep -c kex_exchange_identification` → **`0`** (no MaxStartups drops). Root cause eliminated.
+
+**New downstream issue (SDE-362)**: provisioner next step `sudo hostname smoke-eu-ch2-v4 && echo ... | sudo tee /etc/hostname` aborts with exit 255, DESPITE the command having succeeded on the VM. Filed as a separate bug — not caused by our changes.
+
+### `openstack`-CLI orphan audit (2026-04-17, after all four runs)
+
+Queried the PoC project post-tests. Orphans traceable to our runs:
+
+- **4 keypairs** (one per smoke run v1-v4) — the `DeleteKeyPair` path in driver `Remove()` leaks on every failed create, independent of EIP.
+- **2 orphan EIPs** (v3, v4) with Fixed IP = None — matches the "EOF after EIP delete" pattern (SDE-346).
+- **1 orphan subnet** `subnet-docker-machine`.
+- **1 orphan security group** `docker-machine-grp`.
+
+Conclusion: **SDE-346 is a real resource leak, not a log-only defect**. Manual cleanup commands + analysis in the Jira ticket. See `op-CLI` session output for full IDs.
+
 ## Rancher integration
 
 | Region | driver registered | credential auth OK | cluster provision | `kubectl get nodes` Ready | workload deploy | cluster delete | OTC resources cleaned up |
