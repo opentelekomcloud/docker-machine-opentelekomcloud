@@ -353,13 +353,16 @@ func (d *Driver) Remove() error {
 		mErr = multierror.Append(mErr, err)
 	}
 
-	// SDE-346: EIP release is its own step now — a transient EOF here used
-	// to silently kill all downstream cleanup logs. retryOnEOF absorbs the
-	// intermittent close; if it still fails we log it and continue.
-	log.Info("attempting to release OpenTelekomCloud EIP...")
-	if err := d.deleteEIP(); err != nil {
-		mErr = multierror.Append(mErr, err)
-	}
+	// SDE-346 — order matters: EIP release is moved to LAST because in
+	// smoke-tests v1/v3/v4/v5/v6 it reliably kills the docker-machine
+	// plugin-RPC pipe between rancher-machine and the driver subprocess
+	// (surfaces as `unexpected EOF` to the user, and every subsequent log
+	// write from our side vanishes — hence no retry-warning ever appears).
+	// We haven't root-caused the RPC-pipe death yet; a retry-with-HTTP-
+	// transport-reset was necessary but not sufficient. Until that's fixed
+	// upstream in rancher/machine, do all the other cleanups FIRST so the
+	// EIP-release EOF can only cost us the EIP, not every resource after
+	// it.
 
 	if d.KeyPairName.DriverManaged {
 		log.Info("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
@@ -382,6 +385,15 @@ func (d *Driver) Remove() error {
 	if err := d.deleteVPC(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	// EIP release LAST — see comment above. retryOnEOF + CloseIdleConnections
+	// still help at the HTTP level (and are unit-tested); when the RPC pipe
+	// is broken anyway we at least haven't lost the rest of the cleanup.
+	log.Info("attempting to release OpenTelekomCloud EIP...")
+	if err := d.deleteEIP(); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
+
 	return mErr.ErrorOrNil()
 }
 
