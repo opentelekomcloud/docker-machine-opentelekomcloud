@@ -169,16 +169,21 @@ func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	return kp.PublicKey, nil
 }
 
-// retryOnEOF runs fn once; on an io.ErrUnexpectedEOF it retries once after a
-// short pause. Any other error is returned as-is.
+// retryOnEOF runs fn once; on an io.ErrUnexpectedEOF it calls the reset
+// callback (if any), waits briefly, and retries once.
 //
 // Background (SDE-346): OTC's EIP release intermittently returns "unexpected
-// EOF" on the HTTP response — likely an eager-close of the keep-alive
-// connection after the delete succeeds server-side. Without a retry, the
-// caller fails the cleanup step AND (observed 3× in smoke-tests) the
-// plugin-RPC transport becomes unhealthy enough that the subsequent log
-// lines in `Remove()` never reach rancher-machine's stdout.
-func retryOnEOF(op string, fn func() error) error {
+// EOF" on the HTTP response — the server-side delete succeeds but the
+// transport eagerly closes the keep-alive connection, leaving a half-closed
+// socket in the pool. Without resetting that pool before retrying, the
+// retry picks up the same dead socket and fails again — we confirmed this
+// empirically in smoke v5 where the retry produced no log output at all
+// (the log write happened on the same broken transport).
+//
+// `reset` should drop idle connections / rebuild the HTTP transport so the
+// retry starts with a clean slate. Pass `nil` when there's nothing to
+// reset (unit tests that don't need the full stack).
+func retryOnEOF(op string, reset func(), fn func() error) error {
 	err := fn()
 	if err == nil {
 		return nil
@@ -186,7 +191,10 @@ func retryOnEOF(op string, fn func() error) error {
 	if !isEOFLikeError(err) {
 		return err
 	}
-	log.Warnf("%s: first attempt returned %v — retrying once", op, err)
+	log.Warnf("%s: first attempt returned %v — resetting transport and retrying once", op, err)
+	if reset != nil {
+		reset()
+	}
 	time.Sleep(2 * time.Second)
 	return fn()
 }
@@ -270,9 +278,13 @@ func (d *Driver) deleteEIP() error {
 	}
 
 	log.Info("deleting OpenTelekomCloud Instance EIP: ", addr)
-	err := retryOnEOF("ReleaseEIP "+addr, func() error {
-		return d.client.ReleaseEIP(eips.ListOpts{PublicAddress: addr})
-	})
+	err := retryOnEOF(
+		"ReleaseEIP "+addr,
+		d.client.CloseIdleConnections, // drops the half-closed socket that caused the EOF
+		func() error {
+			return d.client.ReleaseEIP(eips.ListOpts{PublicAddress: addr})
+		},
+	)
 	if err != nil {
 		return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
 	}

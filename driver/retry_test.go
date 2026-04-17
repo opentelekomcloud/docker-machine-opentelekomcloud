@@ -39,7 +39,7 @@ func TestIsEOFLikeError(t *testing.T) {
 // the first attempt succeeds. Sleep must NOT fire.
 func TestRetryOnEOF_successFirstTry(t *testing.T) {
 	calls := 0
-	err := retryOnEOF("noop", func() error {
+	err := retryOnEOF("noop", nil, func() error {
 		calls++
 		return nil
 	})
@@ -52,7 +52,7 @@ func TestRetryOnEOF_successFirstTry(t *testing.T) {
 // the retry. The helper must swallow the first EOF and return nil.
 func TestRetryOnEOF_retriesOnEOFThenSucceeds(t *testing.T) {
 	calls := 0
-	err := retryOnEOF("flaky", func() error {
+	err := retryOnEOF("flaky", nil, func() error {
 		calls++
 		if calls == 1 {
 			return io.ErrUnexpectedEOF
@@ -67,7 +67,7 @@ func TestRetryOnEOF_retriesOnEOFThenSucceeds(t *testing.T) {
 // unrelated failures (e.g. 409 Conflict on a double-delete).
 func TestRetryOnEOF_doesNotRetryOnNonEOF(t *testing.T) {
 	calls := 0
-	err := retryOnEOF("conflict", func() error {
+	err := retryOnEOF("conflict", nil, func() error {
 		calls++
 		return errors.New("409 Conflict")
 	})
@@ -80,11 +80,50 @@ func TestRetryOnEOF_doesNotRetryOnNonEOF(t *testing.T) {
 // forever — two strikes and we surface the error.
 func TestRetryOnEOF_giveUpAfterTwoConsecutiveEOFs(t *testing.T) {
 	calls := 0
-	err := retryOnEOF("still-broken", func() error {
+	err := retryOnEOF("still-broken", nil, func() error {
 		calls++
 		return io.ErrUnexpectedEOF
 	})
 	assert.Error(t, err)
 	assert.Equal(t, 2, calls, "must give up after one retry")
 	assert.True(t, isEOFLikeError(err))
+}
+
+// TestRetryOnEOF_resetCallbackFiresExactlyOnceOnEOF is the key SDE-346
+// invariant: the transport-reset hook must fire between attempt 1 and 2
+// whenever EOF triggers a retry. It MUST NOT fire on non-EOF errors
+// (so successful-first-try and 409-Conflict paths don't wastefully reset
+// the HTTP pool).
+func TestRetryOnEOF_resetCallbackFiresExactlyOnceOnEOF(t *testing.T) {
+	resetCalls := 0
+	fnCalls := 0
+	err := retryOnEOF("eof-with-reset", func() { resetCalls++ }, func() error {
+		fnCalls++
+		if fnCalls == 1 {
+			return io.ErrUnexpectedEOF
+		}
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 2, fnCalls)
+	assert.Equal(t, 1, resetCalls, "reset must run exactly once, between the two attempts")
+}
+
+func TestRetryOnEOF_resetCallbackDoesNotFireOnSuccess(t *testing.T) {
+	resetCalls := 0
+	err := retryOnEOF("happy-path", func() { resetCalls++ }, func() error {
+		return nil
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, 0, resetCalls)
+}
+
+func TestRetryOnEOF_resetCallbackDoesNotFireOnNonEOFError(t *testing.T) {
+	resetCalls := 0
+	err := retryOnEOF("non-eof", func() { resetCalls++ }, func() error {
+		return errors.New("409 Conflict")
+	})
+	assert.Error(t, err)
+	assert.Equal(t, 0, resetCalls,
+		"non-EOF errors must not waste the HTTP pool by triggering a reset")
 }
