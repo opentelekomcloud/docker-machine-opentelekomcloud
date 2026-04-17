@@ -3,7 +3,7 @@ export PATH:=/usr/local/go/bin:$(PATH)
 exec_path := /usr/local/bin/
 exec_name := docker-machine-driver-opentelekomcloud
 
-VERSION := 2.1.0-sotc.1
+VERSION := 2.1.0-sotc.2
 
 
 default: test build
