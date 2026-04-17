@@ -85,9 +85,13 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, defaultSecurityGroup, driver.ManagedSecurityGroup)
-	assert.Equal(t, defaultVpcName, driver.VpcName)
-	assert.Equal(t, defaultSubnetName, driver.SubnetName)
+	// SDE-388: bare defaults are now suffixed with the machine name so
+	// concurrent provisions don't end up with identically-named resources
+	// in the same OTC project. `instanceName` is the test machine name
+	// (see driver_testutils.go); the driver appends it with a dash.
+	assert.Equal(t, defaultSecurityGroup+"-"+instanceName, driver.ManagedSecurityGroup)
+	assert.Equal(t, defaultVpcName+"-"+instanceName, driver.VpcName)
+	assert.Equal(t, defaultSubnetName+"-"+instanceName, driver.SubnetName)
 	assert.Equal(t, defaultFlavor, driver.FlavorName)
 	assert.Equal(t, defaultImage, driver.ImageName)
 	assert.Empty(t, flags.InvalidFlags)

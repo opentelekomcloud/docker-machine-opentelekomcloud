@@ -234,6 +234,79 @@ func TestPreCreateCheck_standardOTCNoProjectOK(t *testing.T) {
 	}
 }
 
+// TestSetConfigFromFlags_qualifiesBareDefaultNames (SDE-388) verifies that
+// a freshly-initialised driver with no user-provided VPC/subnet/SG names
+// ends up with machine-name-suffixed values — so two concurrent provisions
+// don't collide in the OTC project's resource listing.
+func TestSetConfigFromFlags_qualifiesBareDefaultNames(t *testing.T) {
+	driver := NewDriver("my-node-42", "")
+
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-region":     "eu-ch2",
+			"opentelekomcloud-access-key": "dummy",
+			"opentelekomcloud-secret-key": "dummy",
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+	assert.NoError(t, driver.SetConfigFromFlags(flags))
+
+	assert.Equal(t, "vpc-docker-machine-my-node-42", driver.VpcName)
+	assert.Equal(t, "subnet-docker-machine-my-node-42", driver.SubnetName)
+	assert.Equal(t, "docker-machine-grp-my-node-42", driver.ManagedSecurityGroup)
+}
+
+// TestSetConfigFromFlags_userProvidedNamesWinUnchanged (SDE-388) protects
+// the explicit-override path: if the operator passes a custom name, the
+// driver must NOT append the machine-name suffix.
+func TestSetConfigFromFlags_userProvidedNamesWinUnchanged(t *testing.T) {
+	driver := NewDriver("my-node-42", "")
+
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-region":      "eu-ch2",
+			"opentelekomcloud-access-key":  "dummy",
+			"opentelekomcloud-secret-key":  "dummy",
+			"opentelekomcloud-vpc-name":    "existing-customer-vpc",
+			"opentelekomcloud-subnet-name": "existing-customer-subnet",
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+	assert.NoError(t, driver.SetConfigFromFlags(flags))
+
+	assert.Equal(t, "existing-customer-vpc", driver.VpcName)
+	assert.Equal(t, "existing-customer-subnet", driver.SubnetName)
+}
+
+// TestQualifyDefaultNames_idempotent covers a subtle invariant: calling
+// the qualification logic twice must not append the suffix twice.
+func TestQualifyDefaultNames_idempotent(t *testing.T) {
+	d := &Driver{
+		BaseDriver: &drivers.BaseDriver{MachineName: "foo"},
+		VpcName:             defaultVpcName,
+		SubnetName:          defaultSubnetName,
+		ManagedSecurityGroup: defaultSecurityGroup,
+	}
+	d.qualifyDefaultNames()
+	first := d.VpcName
+	d.qualifyDefaultNames()
+	assert.Equal(t, first, d.VpcName, "second call must be a no-op")
+	assert.Equal(t, "vpc-docker-machine-foo", d.VpcName)
+}
+
+// TestQualifyDefaultNames_emptyMachineNameIsNoOp — if the MachineName
+// hasn't been populated yet, we MUST NOT emit a trailing "-". Better to
+// leave the bare default than to produce a malformed value.
+func TestQualifyDefaultNames_emptyMachineNameIsNoOp(t *testing.T) {
+	d := &Driver{
+		BaseDriver: &drivers.BaseDriver{MachineName: ""},
+		VpcName:    defaultVpcName,
+	}
+	d.qualifyDefaultNames()
+	assert.Equal(t, defaultVpcName, d.VpcName,
+		"empty MachineName must leave the default intact, not append a bare '-'")
+}
+
 func TestSetConfigFromFlags_explicit_authURL_wins(t *testing.T) {
 	driver := NewDriver("test-machine", "")
 

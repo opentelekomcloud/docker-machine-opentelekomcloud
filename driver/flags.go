@@ -331,6 +331,17 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		d.ManagedSecurityGroup = defaultSecurityGroup
 	}
 
+	// SDE-388: qualify the bare-default resource names with the machine
+	// name so concurrent `rancher-machine create` invocations don't end up
+	// with identically-named VPCs / subnets / SGs in the same OTC project.
+	// OTC tolerates duplicate names, but the ambiguity makes every manual
+	// audit / orphan cleanup significantly harder. Explicit --opentelekomcloud-*-name
+	// values (anything not equal to the bare default) win unchanged.
+	//
+	// Remove() is UUID-based, so this rename has NO effect on the cleanup
+	// of pre-rename orphan resources — they stay tied to their own state.
+	d.qualifyDefaultNames()
+
 	// Fill region-derived defaults (AuthURL, AvailabilityZone) for any values
 	// the user did not set explicitly. Keeps backwards-compat for eu-de and
 	// makes eu-ch2 (Swiss OTC, `iam-pub.` prefix) work with just --region.

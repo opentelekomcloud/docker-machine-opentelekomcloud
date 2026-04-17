@@ -167,3 +167,32 @@ func (d *Driver) applyRegionDefaults() {
 		d.AvailabilityZone = p.DefaultAZ
 	}
 }
+
+// qualifyDefaultNames appends the machine name to any VPC / subnet /
+// managed-SG value that is still the bare driver default. User-provided
+// names (anything NOT equal to the bare default) are preserved verbatim.
+//
+// Rationale and full background in SDE-388.
+//
+// Invariants this function must preserve:
+//   - If d.MachineName is empty (caller not fully initialized yet), do
+//     nothing — returning the bare default is still valid, and better
+//     than emitting a trailing "-" suffix on the resource name.
+//   - Transformation is idempotent — calling this twice yields the same
+//     result as calling it once, since after the first call the value no
+//     longer equals the bare default.
+func (d *Driver) qualifyDefaultNames() {
+	if d.MachineName == "" {
+		return
+	}
+	suffix := "-" + d.MachineName
+	if d.VpcName == defaultVpcName {
+		d.VpcName = defaultVpcName + suffix
+	}
+	if d.SubnetName == defaultSubnetName {
+		d.SubnetName = defaultSubnetName + suffix
+	}
+	if d.ManagedSecurityGroup == defaultSecurityGroup {
+		d.ManagedSecurityGroup = defaultSecurityGroup + suffix
+	}
+}
