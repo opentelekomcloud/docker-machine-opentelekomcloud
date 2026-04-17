@@ -50,10 +50,16 @@ var regions = map[string]RegionProfile{
 		FlavorFamilies:    nil,
 	},
 	"eu-ch2": {
-		Name:              "eu-ch2",
-		AuthURL:           "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3",
-		AvailabilityZones: []string{"eu-ch2a", "eu-ch2b"},
-		DefaultAZ:         "eu-ch2a",
+		Name:    "eu-ch2",
+		AuthURL: "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3",
+		// AZ naming: Swiss OTC uses the `<region>-NN` convention (same as
+		// Standard OTC), not `<region>a/b`. Verified 2026-04-17 against live
+		// VMs in a Swiss OTC project (OTC console shows `eu-ch2-01`). Passing
+		// an unknown AZ name (like our earlier `eu-ch2a` guess) causes OTC
+		// to silently relocate the VM to a default AZ — a very quiet failure
+		// mode. The validator now hard-rejects unknown AZs for this region.
+		AvailabilityZones: []string{"eu-ch2-01", "eu-ch2-02"},
+		DefaultAZ:         "eu-ch2-01",
 		DefaultFlavor:     "s3.xlarge.2",
 		FlavorFamilies:    []string{"s3."}, // Swiss OTC: only s3-family flavors
 	},

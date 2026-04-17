@@ -27,9 +27,16 @@ func TestRegionProfileFor_known(t *testing.T) {
 			// Swiss OTC uses the iam-pub prefix and .sc. infix.
 			// A simple substitution pattern does NOT produce this — that's
 			// the entire reason this map exists.
+			//
+			// AZ naming: Swiss OTC uses the same `<region>-NN` convention
+			// as Standard OTC (verified 2026-04-17 against live VMs in
+			// a CCM E2E project — OTC console shows `eu-ch2-01`).
+			// An earlier `eu-ch2a` guess was wrong; OTC silently placed
+			// the VM into a default AZ when passed the unknown name —
+			// a very quiet failure mode.
 			region:      "eu-ch2",
 			wantAuthURL: "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3",
-			wantAZ:      "eu-ch2a",
+			wantAZ:      "eu-ch2-01",
 		},
 	}
 
@@ -68,7 +75,7 @@ func TestSetConfigFromFlags_appliesRegionDefaults(t *testing.T) {
 	assert.Equal(t, "eu-ch2", driver.Region)
 	assert.Equal(t, "https://iam-pub.eu-ch2.sc.otc.t-systems.com/v3", driver.AuthURL,
 		"AuthURL must be derived from region profile when not set explicitly")
-	assert.Equal(t, "eu-ch2a", driver.AvailabilityZone,
+	assert.Equal(t, "eu-ch2-01", driver.AvailabilityZone,
 		"AZ default must come from region profile")
 }
 
@@ -85,7 +92,7 @@ func TestValidateAgainstRegion(t *testing.T) {
 	}{
 		{
 			name:   "valid eu-ch2 combo",
-			region: "eu-ch2", az: "eu-ch2a", flavor: "s3.xlarge.2",
+			region: "eu-ch2", az: "eu-ch2-01", flavor: "s3.xlarge.2",
 			wantError: false,
 		},
 		{
@@ -94,8 +101,18 @@ func TestValidateAgainstRegion(t *testing.T) {
 			wantError: true, errorHint: "availability zone",
 		},
 		{
+			name:   "eu-ch2 with old guess AZ (eu-ch2a) is rejected — regression guard",
+			region: "eu-ch2", az: "eu-ch2a", flavor: "s3.xlarge.2",
+			wantError: true, errorHint: "availability zone",
+		},
+		{
+			name:   "eu-ch2-02 is also a valid AZ",
+			region: "eu-ch2", az: "eu-ch2-02", flavor: "s3.xlarge.2",
+			wantError: false,
+		},
+		{
 			name:   "eu-ch2 with wrong flavor family is only warned, not rejected",
-			region: "eu-ch2", az: "eu-ch2a", flavor: "s2.large.2",
+			region: "eu-ch2", az: "eu-ch2-01", flavor: "s2.large.2",
 			wantError: false,
 		},
 		{

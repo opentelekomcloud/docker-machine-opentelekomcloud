@@ -26,7 +26,13 @@ const (
 	defaultSecurityGroup    = "docker-machine-grp"
 	defaultAZ               = "eu-de-01"
 	defaultFlavor           = "s3.xlarge.2"
-	defaultImage            = "Standard_Ubuntu_24.04_amd64_uefi_latest"
+	// Ubuntu 22.04 chosen as default over 24.04 UEFI:
+	//   - matches the existing rke2-sotc-cloud-manager CCM E2E test images
+	//     (2026-04-17 — homogeneous images across sister projects)
+	//   - Ubuntu 24 UEFI on Swiss OTC has shown post-create cloud-init SSH
+	//     drops (tracked in SDE-345); Ubuntu 22 is the stable baseline for
+	//     the driver's current cloud-init handshake.
+	defaultImage = "Standard_Ubuntu_22.04_latest"
 	defaultSSHUser          = "ubuntu"
 	defaultSSHPort          = 22
 	defaultRegion           = "eu-de"
