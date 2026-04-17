@@ -16,7 +16,7 @@ Mark each cell with:
 | `eu-nl`   | ⏭ | ⏭ | ⏭ | ⏭ | n/a | ⏭ | ⏭ |
 | `eu-ch2`  | ✅ | ✅ | ✅ | ⚠️ | n/a | ✅ | ⚠️ |
 
-### Run log — `eu-ch2` (2026-04-17)
+### Run log — `eu-ch2` (2026-04-17, three runs)
 
 - **Tooling**: `rancher-machine` built from source `v0.15.0-rancher142` (Rancher ships Linux binaries only — macOS arm64 needs source build, ~120 MB).
 - **Auth mode**: Username + Password + Domain-Name + `--opentelekomcloud-project-name eu-ch2`. AK/SK auth alone (no project scope) fails with "You must provide a password to authenticate" — gophertelekomcloud's catalog lookup needs a project-scoped token. Documented as implicit requirement.
@@ -37,6 +37,35 @@ Mark each cell with:
 - **⚠️ Destroy**: `rancher-machine rm -f` deleted Instance + SG + EIP, then terminated with "unexpected EOF" before logging Subnet/VPC delete. Need manual OTC console audit to confirm no VPC orphan. Filing as a follow-up bug.
 
 Regions `eu-de` / `eu-nl` skipped — only Swiss OTC PoC credentials were available. The regression test is meaningful because the `eu-de` path is exercised by the existing upstream integration tests (`driver/services/*_test.go`, currently failing in our sandbox because they require `OS_AUTH_URL` — upstream test gap unrelated to our changes).
+
+### Run log — `eu-ch2` run 2 (2026-04-17, `smoke-eu-ch2-v2`)
+
+Attempted with commit `fe0d1c0` which *incorrectly* changed the Swiss AZ from `eu-ch2a` to `eu-ch2-01` based on an OTC Console display observation. The API response was authoritative:
+
+```
+POST https://ecs.eu-ch2.sc.otc.t-systems.com/v1/.../cloudservers
+-> 400 Ecs.0005: "availability_zone=eu-ch2-01 not exist"
+```
+
+Reverted in `e46b379` — **the ECS v1 API accepts `eu-ch2a` / `eu-ch2b`, NOT the console-style names**. The OTC Console display is a zone label that is distinct from the OpenStack AZ identifier. Useful lesson: never widen a profile map based on a single non-API observation.
+
+Cleanup (`rm -f`) completed cleanly this run because no EIP had been attached (ECS create failed before EIP bind). The full log showed `instance → subnet → security groups → vpc` — corroborating SDE-346's EIP-specific theory.
+
+### Run log — `eu-ch2` run 3 (2026-04-17, `smoke-eu-ch2-v3`)
+
+Attempted with AZ reverted to `eu-ch2a` + Ubuntu 22.04 image. Hypothesis: Ubuntu 24 UEFI was the cloud-init SSH drop cause.
+
+Result: **identical failure to run 1** — `cloud-init status --wait` aborted with SSH exit 255. Ubuntu 22 does NOT help. Hypothesis eliminated.
+
+Post-mortem: SSH'd into the VM manually after several retries and pulled sshd logs. Evidence shows:
+
+- Cloud-init completed in **44 seconds** — it was long done by the time rancher-machine's probe hit.
+- Attacker IP `46.151.182.2` was actively brute-forcing port 22 within the first minute.
+- Our OWN SSH attempts alternated between failure (`kex_exchange_identification: Connection closed by remote host`) and success — the classic sshd `MaxStartups` drop signature.
+
+The real root cause is **public SSH exposure via `0.0.0.0/0:22` SG combined with default Ubuntu sshd `MaxStartups 10:30:100`** — SSH scanners flood the queue, rancher-machine's single connect to run `cloud-init status --wait` gets stochastically dropped. Full analysis in SDE-345 comment dated 2026-04-17.
+
+Run 3 cleanup also showed the "unexpected EOF after EIP delete" pattern (SDE-346) — reproduced for the second time on an EIP-attached VM.
 
 ## Rancher integration
 
