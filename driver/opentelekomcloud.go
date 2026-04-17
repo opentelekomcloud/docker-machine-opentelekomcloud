@@ -90,6 +90,21 @@ func (d *Driver) PreCreateCheck() error {
 		return fmt.Errorf("at least one authorization method must be provided (AK/SK, Username/Password(+Domain), or Token)")
 	}
 
+	// Swiss OTC quirk learned the hard way (SDE-345 debug session 2026-04-17):
+	// gophertelekomcloud's auth call against Swiss IAM needs a project-scoped
+	// token to populate the service catalog. Without a project, auth succeeds
+	// but every downstream service call fails with
+	//   "No suitable endpoint could be found in the service catalog"
+	// which is cryptic and far from the actual cause. Fail fast with an
+	// actionable message instead of letting that chain play out.
+	if d.Region == "eu-ch2" && d.ProjectName == "" && d.ProjectID == "" {
+		return fmt.Errorf(
+			"Swiss OTC (eu-ch2) requires a project-scoped token: pass " +
+				"--opentelekomcloud-project-name (or --opentelekomcloud-project-id). " +
+				"Unscoped tokens return an empty service catalog and every ECS/VPC " +
+				"call then fails with 'No suitable endpoint could be found'")
+	}
+
 	if err := d.Authenticate(); err != nil {
 		return err
 	}

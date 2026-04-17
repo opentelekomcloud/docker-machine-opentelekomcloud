@@ -45,17 +45,49 @@ If any test fails catastrophically:
 | `01-standalone-driver-test.md` | Full CLI walk-through for the standalone `rancher-machine` test. |
 | `02-rancher-integration-test.md` | Step-by-step Rancher UI flow for the integration test. |
 | `03-regression-checklist.md` | Matrix to fill during the test run. |
-| `scripts/smoke-test.sh` | Bash one-shot that does standalone create → ssh → destroy. Read it before running — it does real cloud work. |
+| `scripts/setup.sh` | One-shot: builds/installs `rancher-machine` (from source on macOS, binary on Linux) and the driver. Idempotent. |
+| `scripts/smoke-test.sh` | Bash one-shot that does standalone create → ssh → destroy. Real cloud work — reads `OS_*` env vars. |
+| `scripts/.env.op` | 1Password op-run env template (run via `op run --env-file=...`). Fills `OS_USERNAME`, `OS_PROJECT_NAME`, etc. from the vault. |
 
-## Recommended Pre-flight
+## Streamlined flow (2026-04-17 onwards)
+
+```bash
+# one-shot prerequisites
+./docs/phase4/scripts/setup.sh
+
+# smoke test with credentials auto-injected from 1Password
+op run --env-file=docs/phase4/scripts/.env.op -- \
+  ./docs/phase4/scripts/smoke-test.sh
+```
+
+The smoke test automatically:
+
+- Detects auth mode (username/password/domain vs AK/SK).
+- Auto-fills `OS_SSH_ALLOW_CIDR=<your public IP>/32` via `ifconfig.me` so the default-SG's port 22 is NOT left open to `0.0.0.0/0` (SDE-345 fix).
+- Refuses to run against `eu-ch2` without `OS_PROJECT_NAME` (the driver now pre-flight-checks this too — saves a cryptic "No suitable endpoint" error).
+
+## Recommended Pre-flight (manual)
 
 Before touching any cloud resource:
 
 ```bash
 cd /path/to/rke2-sotc-node-driver
-go test ./driver/...        # regions_test.go must pass
-make vet                    # catches any go-vet issues introduced by 632b8fd
-rancher-machine --version   # must be 0.16+
+go test ./driver/...        # regions_test.go + pre-flight tests must pass
+make vet                    # catches any go-vet issues
+rancher-machine --version   # if missing, setup.sh builds it
 ```
 
 If the unit tests fail — **do not** burn cloud time. Fix the failure first.
+
+## Automation provenance
+
+The following manual corrections from the 2026-04-17 debugging session are now baked in:
+
+| Was | Now |
+|---|---|
+| Pass `--opentelekomcloud-project-name eu-ch2_wotest` manually | Pre-flight check in `driver.PreCreateCheck` — fails fast with actionable hint when missing for `eu-ch2`. |
+| Pass `--opentelekomcloud-ssh-allow-cidr <your-IP>/32` | Auto-detected by `smoke-test.sh` via `ifconfig.me`; driver logs a loud WARN when falling back to `0.0.0.0/0`. |
+| Remember `eu-ch2a`/`eu-ch2b` (not the console labels `eu-ch2-01`/`-02`) | Hardcoded in `driver/regions.go` with a comment explaining the API-vs-console mismatch; unit-tested regression guard. |
+| Install rancher-machine from source on macOS | `scripts/setup.sh` handles build-from-source (macOS) vs binary-download (Linux). |
+| Extract AK/SK/username/password/domain/project from 1Password by hand | `scripts/.env.op` template + `op run --env-file=...`. |
+| Prefer Username/Password/Domain for Swiss OTC (AK/SK alone fails catalog lookup) | Auto-selected by `smoke-test.sh` when the three vars are present; documented in the driver source. |

@@ -195,6 +195,45 @@ func TestSetConfigFromFlags_sshAllowCIDR_defaultsEmpty(t *testing.T) {
 		"absence of flag must yield empty string, not a silently-defaulted CIDR")
 }
 
+// TestPreCreateCheck_swissRequiresProject verifies the pre-flight guard
+// that fires before the driver calls IAM. Without this guard, Swiss OTC
+// users see a cryptic "No suitable endpoint could be found" error far
+// downstream (the auth succeeds, then every service call fails because
+// the catalog is empty). The guard trades that for an actionable message.
+func TestPreCreateCheck_swissRequiresProject(t *testing.T) {
+	d := &Driver{
+		Region:    "eu-ch2",
+		AccessKey: "dummy",
+		SecretKey: "dummy",
+		// ProjectName and ProjectID deliberately empty
+	}
+	err := d.PreCreateCheck()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "project-scoped",
+		"error must explain that Swiss OTC needs a project")
+	assert.Contains(t, err.Error(), "project-name",
+		"error must tell the user which flag to set")
+}
+
+// TestPreCreateCheck_standardOTCNoProjectOK confirms the guard doesn't
+// over-reach into Standard OTC flows, where AK/SK without project is a
+// long-supported path.
+func TestPreCreateCheck_standardOTCNoProjectOK(t *testing.T) {
+	d := &Driver{
+		Region:    "eu-de",
+		AccessKey: "dummy",
+		SecretKey: "dummy",
+	}
+	err := d.PreCreateCheck()
+	// Without real IAM access the auth call will fail, but the failure
+	// must NOT be our Swiss-specific project guard — it should be a
+	// network/auth error from a later stage.
+	if err != nil {
+		assert.NotContains(t, err.Error(), "project-scoped",
+			"Standard OTC must not trigger the Swiss project guard")
+	}
+}
+
 func TestSetConfigFromFlags_explicit_authURL_wins(t *testing.T) {
 	driver := NewDriver("test-machine", "")
 
