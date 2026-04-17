@@ -352,6 +352,15 @@ func (d *Driver) Remove() error {
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	// SDE-346: EIP release is its own step now — a transient EOF here used
+	// to silently kill all downstream cleanup logs. retryOnEOF absorbs the
+	// intermittent close; if it still fails we log it and continue.
+	log.Info("attempting to release OpenTelekomCloud EIP...")
+	if err := d.deleteEIP(); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
+
 	if d.KeyPairName.DriverManaged {
 		log.Info("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
