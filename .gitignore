@@ -24,3 +24,4 @@ clouds.yaml
 .vscode
 machines
 /dist/
+.DS_Store
