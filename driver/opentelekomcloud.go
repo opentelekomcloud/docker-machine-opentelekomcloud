@@ -40,6 +40,12 @@ type Driver struct {
 	SecretKey              string       `json:"secret_key,omitempty"`
 	AvailabilityZone       string       `json:"-"`
 	EndpointType           string       `json:"endpoint_type,omitempty"`
+	// SSHAllowCIDR restricts the ingress CIDR for the default Security Group's
+	// port-22 rule. Empty ⇒ keep the legacy hardcoded `0.0.0.0/0` and log a
+	// WARN (backwards-compat). Setting a narrow value (e.g. the operator's
+	// egress /32) prevents the sshd MaxStartups drop attack path that caused
+	// rancher-machine's cloud-init wait to fail — see SDE-345.
+	SSHAllowCIDR           string       `json:"ssh_allow_cidr,omitempty"`
 	InstanceID             string       `json:"instance_id"`
 	FlavorName             string       `json:"-"`
 	FlavorID               string       `json:"-"`
@@ -84,6 +90,21 @@ func (d *Driver) PreCreateCheck() error {
 		return fmt.Errorf("at least one authorization method must be provided (AK/SK, Username/Password(+Domain), or Token)")
 	}
 
+	// Swiss OTC quirk learned the hard way (SDE-345 debug session 2026-04-17):
+	// gophertelekomcloud's auth call against Swiss IAM needs a project-scoped
+	// token to populate the service catalog. Without a project, auth succeeds
+	// but every downstream service call fails with
+	//   "No suitable endpoint could be found in the service catalog"
+	// which is cryptic and far from the actual cause. Fail fast with an
+	// actionable message instead of letting that chain play out.
+	if d.Region == "eu-ch2" && d.ProjectName == "" && d.ProjectID == "" {
+		return fmt.Errorf(
+			"Swiss OTC (eu-ch2) requires a project-scoped token: pass " +
+				"--opentelekomcloud-project-name (or --opentelekomcloud-project-id). " +
+				"Unscoped tokens return an empty service catalog and every ECS/VPC " +
+				"call then fails with 'No suitable endpoint could be found'")
+	}
+
 	if err := d.Authenticate(); err != nil {
 		return err
 	}
@@ -98,6 +119,13 @@ func (d *Driver) PreCreateCheck() error {
 	}
 	if err := d.resolveIDs(); err != nil {
 		return fmt.Errorf("failed to resolve resource IDs: %s", logHTTP500(err))
+	}
+
+	// Validate region-sensitive fields (AZ, flavor family) against the
+	// curated RegionProfile. Design decision (hard-error vs warn) lives
+	// inside validateAgainstRegion — see driver/regions.go.
+	if err := d.validateAgainstRegion(); err != nil {
+		return err
 	}
 
 	if len(d.SecurityGroups) == 0 && d.ManagedSecurityGroup == "" {
@@ -324,6 +352,18 @@ func (d *Driver) Remove() error {
 	if err := d.deleteInstance(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	// SDE-346 — order matters: EIP release is moved to LAST because in
+	// smoke-tests v1/v3/v4/v5/v6 it reliably kills the docker-machine
+	// plugin-RPC pipe between rancher-machine and the driver subprocess
+	// (surfaces as `unexpected EOF` to the user, and every subsequent log
+	// write from our side vanishes — hence no retry-warning ever appears).
+	// We haven't root-caused the RPC-pipe death yet; a retry-with-HTTP-
+	// transport-reset was necessary but not sufficient. Until that's fixed
+	// upstream in rancher/machine, do all the other cleanups FIRST so the
+	// EIP-release EOF can only cost us the EIP, not every resource after
+	// it.
+
 	if d.KeyPairName.DriverManaged {
 		log.Info("deleting key pair...", map[string]string{"Name": d.KeyPairName.Value})
 		if err := d.client.DeleteKeyPair(d.KeyPairName.Value); err != nil {
@@ -345,6 +385,15 @@ func (d *Driver) Remove() error {
 	if err := d.deleteVPC(); err != nil {
 		mErr = multierror.Append(mErr, err)
 	}
+
+	// EIP release LAST — see comment above. retryOnEOF + CloseIdleConnections
+	// still help at the HTTP level (and are unit-tested); when the RPC pipe
+	// is broken anyway we at least haven't lost the rest of the cleanup.
+	log.Info("attempting to release OpenTelekomCloud EIP...")
+	if err := d.deleteEIP(); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
+
 	return mErr.ErrorOrNil()
 }
 

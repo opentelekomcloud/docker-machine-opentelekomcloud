@@ -87,6 +87,18 @@ func (c *Client) Authenticate() error {
 	return nil
 }
 
+// CloseIdleConnections drops all idle keep-alive connections on the
+// ProviderClient's HTTP transport. Used by the driver's Remove() path
+// (SDE-346) to recover from an `unexpected EOF` that left a half-closed
+// socket in the pool — without this, the retry picks up the same dead
+// socket and fails again silently.
+func (c *Client) CloseIdleConnections() {
+	if c == nil || c.Provider == nil {
+		return
+	}
+	c.Provider.HTTPClient.CloseIdleConnections()
+}
+
 // Token - get token
 func (c *Client) Token() (string, error) {
 	if c.Provider == nil || c.Provider.Token() == "" {

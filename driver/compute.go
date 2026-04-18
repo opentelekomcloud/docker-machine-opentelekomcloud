@@ -1,9 +1,12 @@
 package opentelekomcloud
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/docker/machine/libmachine/log"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
@@ -166,6 +169,59 @@ func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	return kp.PublicKey, nil
 }
 
+// retryOnEOF runs fn once; on an io.ErrUnexpectedEOF it calls the reset
+// callback (if any), waits briefly, and retries once.
+//
+// Background (SDE-346): OTC's EIP release intermittently returns "unexpected
+// EOF" on the HTTP response — the server-side delete succeeds but the
+// transport eagerly closes the keep-alive connection, leaving a half-closed
+// socket in the pool. Without resetting that pool before retrying, the
+// retry picks up the same dead socket and fails again — we confirmed this
+// empirically in smoke v5 where the retry produced no log output at all
+// (the log write happened on the same broken transport).
+//
+// `reset` should drop idle connections / rebuild the HTTP transport so the
+// retry starts with a clean slate. Pass `nil` when there's nothing to
+// reset (unit tests that don't need the full stack).
+func retryOnEOF(op string, reset func(), fn func() error) error {
+	err := fn()
+	if err == nil {
+		return nil
+	}
+	if !isEOFLikeError(err) {
+		return err
+	}
+	log.Warnf("%s: first attempt returned %v — resetting transport and retrying once", op, err)
+	if reset != nil {
+		reset()
+	}
+	time.Sleep(2 * time.Second)
+	return fn()
+}
+
+// isEOFLikeError matches io.EOF / io.ErrUnexpectedEOF regardless of whether
+// the transport wrapped them in an fmt.Errorf. String-matching is good
+// enough for this narrow recovery path; we only use the result to decide
+// whether to retry.
+func isEOFLikeError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "unexpected EOF") || strings.Contains(msg, "EOF")
+}
+
+// deleteInstance removes the ECS instance and its auto-created per-instance
+// security group (description matches DefaultSecurityGroupDescription).
+//
+// EIP release used to happen here too; SDE-346 showed that an EOF returned
+// from the EIP release broke the plugin-RPC log stream and hid every
+// subsequent cleanup log line. EIP release now lives in its own helper
+// (`deleteEIP`) that Remove() calls separately, and both release paths use
+// `retryOnEOF` to absorb the intermittent close.
 func (d *Driver) deleteInstance() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
@@ -173,10 +229,6 @@ func (d *Driver) deleteInstance() error {
 	sGroups, err := d.client.GetInstanceSG(d.InstanceID)
 	if err != nil {
 		return fmt.Errorf("failed to get ECS security groups: %s", err)
-	}
-	elasticIP, err := d.client.GetServerEIP(d.InstanceID)
-	if err != nil {
-		return fmt.Errorf("failed to get ECS elastic ip: %s", err)
 	}
 
 	log.Info("deleting OpenTelekomCloud Instance: ", d.InstanceID)
@@ -200,14 +252,42 @@ func (d *Driver) deleteInstance() error {
 			}
 		}
 	}
-	if d.ElasticIP.DriverManaged && elasticIP != "" {
-		log.Info("deleting OpenTelekomCloud Instance EIP: ", elasticIP)
-		if err := d.client.ReleaseEIP(eips.ListOpts{
-			PublicAddress: elasticIP,
-		}); err != nil {
-			return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
-		}
-		d.ElasticIP.Value = ""
+	return nil
+}
+
+// deleteEIP releases the EIP previously bound to the instance, if it was
+// driver-managed. Call AFTER deleteInstance from Remove(). Split out from
+// deleteInstance in SDE-346 so that a transient EOF on release doesn't
+// corrupt the log stream for downstream cleanup steps.
+func (d *Driver) deleteEIP() error {
+	if !d.ElasticIP.DriverManaged {
+		return nil
 	}
+	if err := d.initComputeV2(); err != nil {
+		return err
+	}
+
+	// Re-query the EIP bound to the instance — by this point the instance
+	// is already gone, but GetServerEIP tolerates 404s as the driver expects.
+	// If the address is still known on the Driver struct, use that; falling
+	// back to the per-server lookup is only needed if we're recovering from
+	// a partially-persisted state.
+	addr := d.ElasticIP.Value
+	if addr == "" {
+		return nil
+	}
+
+	log.Info("deleting OpenTelekomCloud Instance EIP: ", addr)
+	err := retryOnEOF(
+		"ReleaseEIP "+addr,
+		d.client.CloseIdleConnections, // drops the half-closed socket that caused the EOF
+		func() error {
+			return d.client.ReleaseEIP(eips.ListOpts{PublicAddress: addr})
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
+	}
+	d.ElasticIP.Value = ""
 	return nil
 }
