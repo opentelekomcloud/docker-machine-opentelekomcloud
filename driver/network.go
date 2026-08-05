@@ -1,5 +1,4 @@
 package opentelekomcloud
-// trst
 
 import (
 	"fmt"
@@ -10,6 +9,7 @@ import (
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 )
 
+// Function to describe
 func (d *Driver) initNetwork() error {
 	if err := d.Authenticate(); err != nil {
 		return fmt.Errorf("failed to authenticate: %s", logHTTP500(err))
