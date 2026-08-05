@@ -1,5 +1,6 @@
 package opentelekomcloud
 // trst
+
 import (
 	"fmt"
 
