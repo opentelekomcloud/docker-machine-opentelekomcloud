@@ -59,8 +59,11 @@ func (d *Driver) createDefaultGroup() error {
 	if d.ManagedSecurityGroupID != "" || d.ManagedSecurityGroup == "" {
 		return nil
 	}
+	if d.SSHAllowCIDR == "" {
+		log.Warnf("default security group allows SSH ingress from 0.0.0.0/0; set --opentelekomcloud-ssh-allow-cidr to restrict access")
+	}
 	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup,
-		services.PortRange{From: d.SSHPort},
+		services.PortRange{From: d.SSHPort, CIDR: d.SSHAllowCIDR},
 		services.PortRange{From: dockerPort},
 		services.PortRange{From: dockerEtcdPort},
 		services.PortRange{From: dockerEtcdPeerPort},

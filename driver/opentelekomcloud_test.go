@@ -93,6 +93,35 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 	assert.Empty(t, flags.InvalidFlags)
 }
 
+func TestDriver_SetConfigFromFlagsSSHAllowCIDR(t *testing.T) {
+	const allowCIDR = "203.0.113.42/32"
+	driver := NewDriver(instanceName, "path")
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-cloud":          defaultCloud(),
+			"opentelekomcloud-ssh-allow-cidr": allowCIDR,
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+
+	require.NoError(t, driver.SetConfigFromFlags(flags))
+	assert.Equal(t, allowCIDR, driver.SSHAllowCIDR)
+	assert.Empty(t, flags.InvalidFlags)
+}
+
+func TestDriver_SetConfigFromFlagsSSHAllowCIDRDefaultsEmpty(t *testing.T) {
+	driver := NewDriver(instanceName, "path")
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-cloud": defaultCloud(),
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+
+	require.NoError(t, driver.SetConfigFromFlags(flags))
+	assert.Empty(t, driver.SSHAllowCIDR)
+}
+
 func TestDriver_Auth(t *testing.T) {
 	testFlags := map[string]map[string]interface{}{
 		"default": defaultFlags,

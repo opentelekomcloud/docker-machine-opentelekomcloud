@@ -207,6 +207,11 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage: "Don't create default security group",
 		},
 		mcnflag.StringFlag{
+			Name:   "opentelekomcloud-ssh-allow-cidr",
+			EnvVar: "OS_SSH_ALLOW_CIDR",
+			Usage:  "CIDR allowed to reach the SSH port in the default security group (default: 0.0.0.0/0)",
+		},
+		mcnflag.StringFlag{
 			Name:   "opentelekomcloud-server-group",
 			EnvVar: "OS_SERVER_GROUP",
 			Usage:  "Define server group where server will be created",
@@ -265,6 +270,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.IPVersion = flags.Int("opentelekomcloud-ip-version")
 	d.SSHUser = flags.String("opentelekomcloud-ssh-user")
 	d.SSHPort = flags.Int("opentelekomcloud-ssh-port")
+	d.SSHAllowCIDR = flags.String("opentelekomcloud-ssh-allow-cidr")
 	d.KeyPairName = managedSting{Value: flags.String("opentelekomcloud-keypair-name")}
 	d.PrivateKeyFile = flags.String("opentelekomcloud-private-key-file")
 
