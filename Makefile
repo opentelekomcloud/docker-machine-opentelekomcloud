@@ -5,9 +5,14 @@ exec_name := docker-machine-driver-opentelekomcloud
 
 VERSION := 2.0.1
 
+.PHONY: default test unit fmt lint vet acceptance acceptance-services build build-linux build-windows build-all install release
 
 default: test build
-test: vet acceptance
+test: vet unit
+
+unit:
+	@echo "Starting unit tests..."
+	@go test -v -race ./...
 
 fmt:
 	@echo Running go fmt
@@ -23,11 +28,11 @@ vet:
 
 acceptance:
 	@echo "Starting acceptance tests..."
-	@go test -v -race -covermode=atomic -coverprofile=coverage.txt -timeout 20m ./driver
+	@go test -v -race -tags=acceptance -covermode=atomic -coverprofile=coverage.txt -timeout 20m ./driver
 
 acceptance-services:
 	@echo "Starting acceptance tests for services..."
-	@go test -v -race -timeout 60m ./driver/services
+	@go test -v -race -tags=acceptance -timeout 60m ./driver/services
 
 build: build-linux
 

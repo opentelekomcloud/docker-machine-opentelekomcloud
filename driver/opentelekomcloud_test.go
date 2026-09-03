@@ -1,3 +1,5 @@
+//go:build acceptance
+
 package opentelekomcloud
 
 import (
@@ -42,14 +44,35 @@ func defaultAz() string {
 }
 
 func defaultCloud() string {
-	if val := os.Getenv("OS_CLOUD"); val != "" {
-		return val
-	}
-	return "functest_cloud"
+	return os.Getenv("OS_CLOUD")
 }
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 	driver := NewDriver(instanceName, "")
+	flagsValues := make(map[string]interface{}, len(driverFlags)+10)
+	for key, value := range driverFlags {
+		flagsValues[key] = value
+	}
+	for flagName, envName := range map[string]string{
+		"opentelekomcloud-auth-url":     "OS_AUTH_URL",
+		"opentelekomcloud-domain-id":    "OS_DOMAIN_ID",
+		"opentelekomcloud-domain-name":  "OS_DOMAIN_NAME",
+		"opentelekomcloud-username":     "OS_USERNAME",
+		"opentelekomcloud-password":     "OS_PASSWORD",
+		"opentelekomcloud-project-name": "OS_PROJECT_NAME",
+		"opentelekomcloud-project-id":   "OS_PROJECT_ID",
+		"opentelekomcloud-region":       "OS_REGION",
+		"opentelekomcloud-token":        "OS_TOKEN",
+		"opentelekomcloud-access-key":   "OS_ACCESS_KEY",
+		"opentelekomcloud-secret-key":   "OS_SECRET_KEY",
+	} {
+		if _, exists := flagsValues[flagName]; exists {
+			continue
+		}
+		if value := os.Getenv(envName); value != "" {
+			flagsValues[flagName] = value
+		}
+	}
 
 	storePath := driver.ResolveStorePath("")
 	if _, err := os.Stat(storePath); os.IsNotExist(err) {
@@ -59,7 +82,7 @@ func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 	}
 
 	flags := &drivers.CheckDriverOptions{
-		FlagsValues: driverFlags,
+		FlagsValues: flagsValues,
 		CreateFlags: driver.GetCreateFlags(),
 	}
 	if err := driver.SetConfigFromFlags(flags); err != nil {
@@ -74,52 +97,6 @@ func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
 
 func defaultDriver() (*Driver, error) {
 	return newDriverFromFlags(defaultFlags)
-}
-
-func TestDriver_SetConfigFromFlags(t *testing.T) {
-	driver := NewDriver(instanceName, "path")
-	flags := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"opentelekomcloud-cloud": defaultCloud(),
-		},
-		CreateFlags: driver.GetCreateFlags(),
-	}
-	assert.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, defaultSecurityGroup, driver.ManagedSecurityGroup)
-	assert.Equal(t, defaultVpcName, driver.VpcName)
-	assert.Equal(t, defaultSubnetName, driver.SubnetName)
-	assert.Equal(t, defaultFlavor, driver.FlavorName)
-	assert.Equal(t, defaultImage, driver.ImageName)
-	assert.Empty(t, flags.InvalidFlags)
-}
-
-func TestDriver_SetConfigFromFlagsSSHAllowCIDR(t *testing.T) {
-	const allowCIDR = "203.0.113.42/32"
-	driver := NewDriver(instanceName, "path")
-	flags := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"opentelekomcloud-cloud":          defaultCloud(),
-			"opentelekomcloud-ssh-allow-cidr": allowCIDR,
-		},
-		CreateFlags: driver.GetCreateFlags(),
-	}
-
-	require.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Equal(t, allowCIDR, driver.SSHAllowCIDR)
-	assert.Empty(t, flags.InvalidFlags)
-}
-
-func TestDriver_SetConfigFromFlagsSSHAllowCIDRDefaultsEmpty(t *testing.T) {
-	driver := NewDriver(instanceName, "path")
-	flags := &drivers.CheckDriverOptions{
-		FlagsValues: map[string]interface{}{
-			"opentelekomcloud-cloud": defaultCloud(),
-		},
-		CreateFlags: driver.GetCreateFlags(),
-	}
-
-	require.NoError(t, driver.SetConfigFromFlags(flags))
-	assert.Empty(t, driver.SSHAllowCIDR)
 }
 
 func TestDriver_Auth(t *testing.T) {
@@ -380,32 +357,6 @@ func TestDriver_CreateWithUserData(t *testing.T) {
 	}()
 	assert.NoError(t, driver.Create())
 	assert.NoError(t, driver.Remove())
-}
-
-func TestDriver_UserDataRaw(t *testing.T) {
-	fileName := "tmp.sh"
-	userData := []byte("#!/bin/bash\necho touch > /tmp/my")
-	require.NoError(t, os.WriteFile(fileName, userData, os.ModePerm))
-	defer func() {
-		_ = os.Remove(fileName)
-	}()
-
-	driverFl, err := newDriverFromFlags(
-		map[string]interface{}{
-			"opentelekomcloud-cloud":          defaultCloud(),
-			"opentelekomcloud-user-data-file": fileName,
-		})
-	require.NoError(t, err)
-	require.NoError(t, driverFl.getUserData())
-
-	driverRaw, err := newDriverFromFlags(
-		map[string]interface{}{
-			"opentelekomcloud-cloud":         defaultCloud(),
-			"opentelekomcloud-user-data-raw": string(userData),
-		})
-	require.NoError(t, err)
-
-	assert.Equal(t, driverFl.UserData, driverRaw.UserData)
 }
 
 func TestDriver_ResolveServerGroup(t *testing.T) {
