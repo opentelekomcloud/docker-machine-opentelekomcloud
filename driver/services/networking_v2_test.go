@@ -197,7 +197,7 @@ func TestClient_LoadBalancerLifecycle(t *testing.T) {
 		},
 		SubnetID:    subnet.ID,
 		KeyPairName: kp.Name,
-		DiskOpts:    &DiskOpts{SourceID: imgRef, Size: 10, Type: "SATA"},
+		DiskOpts:    &DiskOpts{SourceID: imgRef, Size: 40, Type: "SSD"},
 	}
 
 	nodes, addresses, err := createNodes(client, opts, subnet.CIDR, 3)

@@ -62,6 +62,11 @@ func TestClient_ClusterLifecycle(t *testing.T) {
 	t.Logf("Key pair for CCE created: %s", vpc.Name)
 
 	cluster, err := client.CreateCluster(opts)
+	if cluster != nil && cluster.Metadata.Id != "" {
+		defer func() {
+			assert.NoError(t, client.DeleteCluster(cluster.Metadata.Id))
+		}()
+	}
 	require.NoError(t, err)
 	clusterID := cluster.Metadata.Id
 	t.Logf("CCE cluster created: %s", clusterID)
@@ -69,24 +74,29 @@ func TestClient_ClusterLifecycle(t *testing.T) {
 	nodeOpts := &CreateNodesOpts{
 		Name:             "node-test",
 		ClusterID:        clusterID,
-		Region:           os.Getenv("OTC_PROJECT_NAME"),
+		Region:           os.Getenv("OS_PROJECT_NAME"),
 		KeyPair:          kp.Name,
 		FlavorID:         "s2.large.2",
 		AvailabilityZone: "eu-de-01",
 		RootVolume: nodes.VolumeSpec{
 			Size:       40,
-			VolumeType: "SATA",
+			VolumeType: "SSD",
 		},
 		DataVolumes: []nodes.VolumeSpec{
 			{
 				Size:       100,
-				VolumeType: "SATA",
+				VolumeType: "SSD",
 			},
 		},
 		PublicKey: kp.PublicKey,
 	}
 	nodeCount := 2
 	created, err := client.CreateNodes(nodeOpts, nodeCount)
+	if len(created) > 0 {
+		defer func() {
+			assert.NoError(t, client.DeleteNodes(clusterID, created))
+		}()
+	}
 	require.NoError(t, err)
 	t.Logf("CCE cluster nodes created: %s", created)
 
@@ -95,8 +105,4 @@ func TestClient_ClusterLifecycle(t *testing.T) {
 	assert.Len(t, status, nodeCount)
 	assert.NotContains(t, status, "")
 
-	assert.NoError(t, client.DeleteNodes(clusterID, created))
-	t.Log("CCE cluster nodes deleted")
-	assert.NoError(t, client.DeleteCluster(clusterID))
-	t.Log("CCE cluster deleted")
 }
