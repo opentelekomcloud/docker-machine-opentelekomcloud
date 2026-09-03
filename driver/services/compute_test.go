@@ -1,3 +1,5 @@
+//go:build acceptance
+
 package services
 
 import (
@@ -17,7 +19,7 @@ import (
 const (
 	defaultAZ     = "eu-de-03"
 	defaultFlavor = "s2.large.2"
-	defaultImage  = "Standard_Debian_11_latest"
+	defaultImage  = "Standard_Ubuntu_24.04_amd64_uefi_latest"
 )
 
 var (
@@ -64,12 +66,7 @@ func cleanupResources(t *testing.T) {
 		err = c.WaitForInstanceStatus(srvID, "")
 		require.IsType(t, golangsdk.ErrDefault404{}, err)
 	}
-	go func() {
-		err := c.DeleteKeyPair(kpName)
-		if err != nil {
-			log.Print(err)
-		}
-	}()
+	_ = c.DeleteKeyPair(kpName)
 	sg, _ := c.FindSecurityGroups([]string{sgName})
 	for _, sgID := range sg {
 		assert.NoError(t, c.DeleteSecurityGroup(sgID))
@@ -237,7 +234,7 @@ func TestClient_CreateInstance(t *testing.T) {
 		},
 		SubnetID:    subnet.ID,
 		KeyPairName: kp.Name,
-		DiskOpts:    &DiskOpts{SourceID: imgRef, Size: 10, Type: "SATA"},
+		DiskOpts:    &DiskOpts{SourceID: imgRef, Size: 40, Type: "SSD"},
 	}
 	instance, err := client.CreateInstance(opts)
 	require.NoError(t, err)

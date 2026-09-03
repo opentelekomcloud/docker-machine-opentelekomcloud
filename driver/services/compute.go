@@ -299,12 +299,15 @@ const (
 	tcpProtocol = "TCP"
 )
 
-func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int) error {
+func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int, ruleCIDR string) error {
+	if ruleCIDR == "" {
+		ruleCIDR = cidrAll
+	}
 	ruleOpts := secgroups.CreateRuleOpts{
 		ParentGroupID: secGroupID,
 		FromPort:      fromPort,
 		ToPort:        toPort,
-		CIDR:          cidrAll,
+		CIDR:          ruleCIDR,
 		IPProtocol:    tcpProtocol,
 	}
 	return secgroups.CreateRule(c.ComputeV2, ruleOpts).Err
@@ -314,6 +317,7 @@ func (c *Client) addInboundRule(secGroupID string, fromPort int, toPort int) err
 type PortRange struct {
 	From int
 	To   int
+	CIDR string
 }
 
 // CreateSecurityGroup creates new sec group and returns group ID
@@ -330,7 +334,7 @@ func (c *Client) CreateSecurityGroup(securityGroupName string, ports ...PortRang
 		if port.To == 0 {
 			port.To = port.From
 		}
-		if err := c.addInboundRule(sg.ID, port.From, port.To); err != nil {
+		if err := c.addInboundRule(sg.ID, port.From, port.To, port.CIDR); err != nil {
 			return nil, err
 		}
 	}

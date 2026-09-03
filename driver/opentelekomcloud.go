@@ -40,6 +40,7 @@ type Driver struct {
 	SecretKey              string       `json:"secret_key,omitempty"`
 	AvailabilityZone       string       `json:"-"`
 	EndpointType           string       `json:"endpoint_type,omitempty"`
+	SSHAllowCIDR           string       `json:"ssh_allow_cidr,omitempty"`
 	InstanceID             string       `json:"instance_id"`
 	FlavorName             string       `json:"-"`
 	FlavorID               string       `json:"-"`

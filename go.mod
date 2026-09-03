@@ -7,7 +7,7 @@ require (
 	github.com/docker/machine v0.16.2
 	github.com/getlantern/deepcopy v0.0.0-20160317154340-7f45deb8130a
 	github.com/hashicorp/go-multierror v1.1.0
-	github.com/opentelekomcloud/gophertelekomcloud v0.9.6-0.20251110145723-c2baf4c77321
+	github.com/opentelekomcloud/gophertelekomcloud v0.9.9-0.20260902104630-3e2efcf487d3
 	github.com/stretchr/testify v1.7.1
 	golang.org/x/crypto v0.31.0
 )
