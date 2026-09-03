@@ -78,6 +78,7 @@ func TestClient_ClusterLifecycle(t *testing.T) {
 		KeyPair:          kp.Name,
 		FlavorID:         "s2.large.2",
 		AvailabilityZone: "eu-de-01",
+		Runtime:          "containerd",
 		RootVolume: nodes.VolumeSpec{
 			Size:       40,
 			VolumeType: "SSD",

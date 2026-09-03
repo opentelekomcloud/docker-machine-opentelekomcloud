@@ -73,6 +73,7 @@ type CreateNodesOpts struct {
 	RootVolume       nodes.VolumeSpec   // required, 40G+
 	DataVolumes      []nodes.VolumeSpec // at least one is required required, 100G+
 	Os               string             // by default EulerOS 2.5
+	Runtime          string             // docker or containerd
 	MaxPods          int
 	PreInstall       string
 	PostInstall      string
@@ -308,6 +309,7 @@ func (c *Client) CreateNodes(opts *CreateNodesOpts, count int) ([]string, error)
 			Flavor:      opts.FlavorID,
 			Az:          opts.AvailabilityZone,
 			Os:          opts.Os,
+			Runtime:     nodes.RuntimeSpec{Name: opts.Runtime},
 			Login:       nodes.LoginSpec{SshKey: opts.KeyPair},
 			RootVolume:  opts.RootVolume,
 			DataVolumes: opts.DataVolumes,
