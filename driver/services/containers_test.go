@@ -79,6 +79,7 @@ func TestClient_ClusterLifecycle(t *testing.T) {
 		FlavorID:         "s2.large.2",
 		AvailabilityZone: "eu-de-01",
 		Runtime:          "containerd",
+		Os:               "EulerOS 2.9",
 		RootVolume: nodes.VolumeSpec{
 			Size:       40,
 			VolumeType: "SSD",
