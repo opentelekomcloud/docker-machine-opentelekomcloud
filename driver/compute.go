@@ -1,7 +1,9 @@
 package opentelekomcloud
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -166,6 +168,24 @@ func (d *Driver) createKeyPair(publicKey []byte) (string, error) {
 	return kp.PublicKey, nil
 }
 
+func retryOnUnexpectedEOF(operation string, resetTransport func(), operationFunc func() error) error {
+	err := operationFunc()
+	if err == nil || !isUnexpectedEOF(err) {
+		return err
+	}
+
+	log.Warnf("%s returned an unexpected EOF; resetting HTTP transport and retrying once", operation)
+	if resetTransport != nil {
+		resetTransport()
+	}
+	return operationFunc()
+}
+
+func isUnexpectedEOF(err error) bool {
+	return errors.Is(err, io.ErrUnexpectedEOF) ||
+		(err != nil && strings.Contains(strings.ToLower(err.Error()), "unexpected eof"))
+}
+
 func (d *Driver) deleteInstance() error {
 	if err := d.initComputeV2(); err != nil {
 		return err
@@ -174,11 +194,6 @@ func (d *Driver) deleteInstance() error {
 	if err != nil {
 		return fmt.Errorf("failed to get ECS security groups: %s", err)
 	}
-	elasticIP, err := d.client.GetServerEIP(d.InstanceID)
-	if err != nil {
-		return fmt.Errorf("failed to get ECS elastic ip: %s", err)
-	}
-
 	log.Info("deleting OpenTelekomCloud Instance: ", d.InstanceID)
 	if err := d.client.DeleteInstance(d.InstanceID); err != nil {
 		return fmt.Errorf("failed to delete instance: %s", logHTTP500(err))
@@ -200,14 +215,25 @@ func (d *Driver) deleteInstance() error {
 			}
 		}
 	}
-	if d.ElasticIP.DriverManaged && elasticIP != "" {
-		log.Info("deleting OpenTelekomCloud Instance EIP: ", elasticIP)
-		if err := d.client.ReleaseEIP(eips.ListOpts{
-			PublicAddress: elasticIP,
-		}); err != nil {
-			return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
-		}
-		d.ElasticIP.Value = ""
+	return nil
+}
+
+func (d *Driver) deleteEIP() error {
+	if !d.ElasticIP.DriverManaged || d.ElasticIP.Value == "" {
+		return nil
 	}
+	if err := d.initNetwork(); err != nil {
+		return err
+	}
+
+	address := d.ElasticIP.Value
+	log.Info("deleting OpenTelekomCloud Instance EIP: ", address)
+	err := retryOnUnexpectedEOF("release EIP", d.client.ResetHTTPTransport, func() error {
+		return d.client.ReleaseEIP(eips.ListOpts{PublicAddress: address})
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete floating IP: %s", logHTTP500(err))
+	}
+	d.ElasticIP.Value = ""
 	return nil
 }
