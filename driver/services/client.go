@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -85,6 +86,29 @@ func (c *Client) Authenticate() error {
 	c.Provider = providerClient
 	c.Provider.UserAgent.Prepend(userAgent)
 	return nil
+}
+
+// ResetHTTPTransport closes pooled connections and replaces the standard HTTP
+// transport with a fresh clone. Service clients share the ProviderClient, so
+// subsequent requests use the replacement transport automatically.
+func (c *Client) ResetHTTPTransport() {
+	if c == nil || c.Provider == nil {
+		return
+	}
+
+	transport := c.Provider.HTTPClient.Transport
+	if transport == nil {
+		c.Provider.HTTPClient.Transport = http.DefaultTransport.(*http.Transport).Clone()
+		return
+	}
+
+	if transport, ok := transport.(*http.Transport); ok {
+		transport.CloseIdleConnections()
+		c.Provider.HTTPClient.Transport = transport.Clone()
+		return
+	}
+
+	c.Provider.HTTPClient.CloseIdleConnections()
 }
 
 // Token - get token

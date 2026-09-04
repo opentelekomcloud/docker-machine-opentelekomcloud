@@ -3,7 +3,7 @@ export PATH:=/usr/local/go/bin:$(PATH)
 exec_path := /usr/local/bin/
 exec_name := docker-machine-driver-opentelekomcloud
 
-VERSION := 2.0.1
+VERSION := 2.0.2
 
 .PHONY: default test unit fmt lint vet acceptance acceptance-services build build-linux build-windows build-all install release
 
