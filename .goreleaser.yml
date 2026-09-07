@@ -1,10 +1,9 @@
-# Visit https://goreleaser.com for documentation on how to customize this
-# behavior.
+version: 2
+
 project_name: docker-machine-driver-opentelekomcloud
 before:
   hooks:
-    # this is just an example and not a requirement for provider building/publishing
-    - go mod tidy
+    - go mod verify
 builds:
   - env:
       # goreleaser does not work with CGO, it could also complicate
@@ -46,23 +45,17 @@ builds:
         goarch: arm
     binary: '{{ .ProjectName }}'
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 checksum:
   name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
   algorithm: sha256
-signs:
-  - artifacts: checksum
-    args:
-      - "--output"
-      - "${signature}"
-      - "--detach-sign"
-      - "${artifact}"
 release:
-  # Visit your project's GitHub Releases page to publish this release.
   github:
     owner: opentelekomcloud
     name: docker-machine-opentelekomcloud
