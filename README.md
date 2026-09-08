@@ -1,7 +1,5 @@
 #  T-Cloud Public (former OpenTelekomCloud) Docker Machine driver
 
-[![CI](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/actions/workflows/ci.yaml/badge.svg?branch=devel)](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/actions/workflows/ci.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud)](https://goreportcard.com/report/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
 [![Go Reference](https://pkg.go.dev/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud.svg)](https://pkg.go.dev/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
 [![GitHub release](https://img.shields.io/github/v/release/opentelekomcloud/docker-machine-opentelekomcloud)](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/releases)
 ![Go version](https://img.shields.io/github/go-mod/go-version/opentelekomcloud/docker-machine-opentelekomcloud)
