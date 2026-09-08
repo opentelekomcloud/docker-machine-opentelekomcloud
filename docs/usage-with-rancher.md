@@ -28,11 +28,18 @@
 
 ### Requirements
 - [Rancher]([https://www.terraform.io/downloads.html](https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade)) above v2.8.x (RKE2 only support).
+- [t-cloud-public-node-driver-extension](https://github.com/opentelekomcloud/t-cloud-public-node-driver-extension) UI extension must be installed in Rancher. It replaces the legacy node-driver UI and is **required** to configure OTC machines, manage cloud credentials, and provision RKE2 clusters through the Rancher UI with this driver.
 
 ### Remove old node driver:
 
 * Open Rancher UI page and go to `Tools` → `Drivers` → `Node Drivers`.
 * Check current preinstalled `Open Telekom Cloud` driver and remove it, because it produces conflicts with current implementation.
+
+### Install the UI extension:
+
+* Open `//rancher.instance/dashboard/c/_/uiplugins` → `Manage Repositories` → `Create` and add the [t-cloud-public-node-driver-extension](https://github.com/opentelekomcloud/t-cloud-public-node-driver-extension) repository (published via GitHub Pages, see the extension's README for the repository URL).
+* Once the repository is added, go to `Extensions`, find `T Cloud Public Node Driver Extension` and install it.
+* Without this extension installed, the RKE2 node driver template cannot be configured from the Rancher UI.
 
 ### Usage of new node driver:
 
@@ -54,6 +61,6 @@
      active: true
      addCloudCredential: true
      displayName: "OpenTelekomCloud"
-     url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/rke2/driver/beta/2.0.0/docker-machine-driver-opentelekomcloud_2.0.0_linux_amd64.tar.gz"
+     url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
    EOF
 ```

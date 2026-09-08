@@ -1,14 +1,17 @@
-# OpenTelekomCloud Docker Machine driver
+#  T-Cloud Public (former OpenTelekomCloud) Docker Machine driver
 
-[![Zuul Gate](https://zuul.otc-service.com/api/tenant/eco/badge?project=opentelekomcloud/docker-machine-opentelekomcloud&pipeline=check&branch=devel)](https://zuul.eco.tsi-dev.otc-service.com/t/eco/builds?project=opentelekomcloud%2Fdocker-machine-opentelekomcloud)
+[![CI](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/actions/workflows/ci.yaml/badge.svg?branch=devel)](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/actions/workflows/ci.yaml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud)](https://goreportcard.com/report/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
+[![Go Reference](https://pkg.go.dev/badge/github.com/opentelekomcloud/docker-machine-opentelekomcloud.svg)](https://pkg.go.dev/github.com/opentelekomcloud/docker-machine-opentelekomcloud)
+[![GitHub release](https://img.shields.io/github/v/release/opentelekomcloud/docker-machine-opentelekomcloud)](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud/releases)
+![Go version](https://img.shields.io/github/go-mod/go-version/opentelekomcloud/docker-machine-opentelekomcloud)
 ![GitHub](https://img.shields.io/github/license/opentelekomcloud/docker-machine-opentelekomcloud)
 
-OpenTelekomCloud driver for docker-machine
+T-Cloud Public (former OpenTelekomCloud) driver for docker-machine
 
 ### Comparing with other drivers
 
-There is another option of docker-machine driver suitable for usage with OpenTelekomCloud:
+There is another option of docker-machine driver suitable for usage with T-Cloud Public (former OpenTelekomCloud):
 
 * [docker-machine-openstack](https://opendev.org/x/docker-machine-openstack) ― docker-machine built-in
 
@@ -36,7 +39,7 @@ Driver can be installed several ways
 
 #### From source code
 
-_(Requires Go 1.13+, gcc and make installed)_
+_(Requires Go 1.24+, gcc and make installed)_
 
 1. Clone [this](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud) git repository to any location
 2. Run `make build && sudo make install`, driver for linux will be built and copied to `/usr/local/bin`
@@ -64,9 +67,9 @@ $ docker-machine create -d opentelekomcloud --opentelekomcloud-cloud opentelekom
 
 **Following will be created if not provided:**
 
-- **Security Group:** `docker-machine-grp`
-- **VPC:** `vpc-docker-machine`
-- **Subnet:** `subnet-docker-machine`
+- **Security Group:** `docker-machine-grp` + MachineName
+- **VPC:** `vpc-docker-machine` + MachineName
+- **Subnet:** `subnet-docker-machine` + MachineName
 - **Elastic IP:** with bandwidth limited to `100` MBit/s
 
 **Machine with following setup will be started:**
@@ -85,10 +88,6 @@ For versions `v0.3.x` see [supported-options](docs/supported-options-v0.3.x.md).
 For versions `v0.2.x` see [supported-options](docs/supported-options-v0.2.x.md).
 
 For versions `v2.0.x` see [supported-options](docs/supported-options-v2.0.x.md).
-
-Please **note** that only `v0.2.x` support old flags and targets to provide full backward compatibility
-with `DockerMachineDriver4OTC`. In versions `v0.3.+` duplicating options were removed and all environment variables are
-prefixed with `OS_`.
 
 Please **note** that only `v2.0.x` support RKE2 cluster installation.
 All variables CLI variables now prefixed with `opentelekomcloud`.
