@@ -102,7 +102,7 @@ jobs:
 
   release:
     name: release
-    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/') }}
+    if: ${{ github.ref_type == 'tag' }}
     needs: eco_check
     runs-on: ubuntu-latest
     permissions:
