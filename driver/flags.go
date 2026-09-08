@@ -325,6 +325,40 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 		d.ManagedSecurityGroup = defaultSecurityGroup
 	}
 
+	// qualify the bare-default resource names with the machine
+	// name so concurrent `docker-machine create` invocations don't end up
+	// with identically-named VPCs / subnets / SGs in the same OTC project
+	// or across regions/projects sharing the same defaults. OTC tolerates
+	// duplicate names, but the ambiguity makes manual audits and orphan
+	// cleanup significantly harder. Explicit --opentelekomcloud-*-name
+	// values (anything not equal to the bare default) are preserved as-is.
+	d.qualifyDefaultNames()
+
 	d.SetSwarmConfigFromFlags(flags)
 	return d.checkConfig()
+}
+
+// qualifyDefaultNames appends the machine name to any VPC / subnet /
+// managed-security-group value that is still set to its bare driver
+// default. User-provided names are left untouched.
+//
+// Invariants:
+//   - If d.MachineName is empty, do nothing — this avoids emitting a
+//     trailing "-" suffix on the resource name.
+//   - The transformation is idempotent: once qualified, the value no
+//     longer equals the bare default, so a second call is a no-op.
+func (d *Driver) qualifyDefaultNames() {
+	if d.MachineName == "" {
+		return
+	}
+	suffix := "-" + d.MachineName
+	if d.VpcName == defaultVpcName {
+		d.VpcName = defaultVpcName + suffix
+	}
+	if d.SubnetName == defaultSubnetName {
+		d.SubnetName = defaultSubnetName + suffix
+	}
+	if d.ManagedSecurityGroup == defaultSecurityGroup {
+		d.ManagedSecurityGroup = defaultSecurityGroup + suffix
+	}
 }
