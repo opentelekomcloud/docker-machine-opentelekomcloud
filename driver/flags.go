@@ -111,6 +111,12 @@ func (d *Driver) GetCreateFlags() []mcnflag.Flag {
 			Usage:  "OpenTelekomCloud VPC id the machine will be connected on",
 		},
 		mcnflag.StringFlag{
+			Name:   "opentelekomcloud-network-scope",
+			EnvVar: "OS_NETWORK_SCOPE",
+			Usage:  "Network resource scope: machine creates per-machine resources; shared requires existing cluster-owned VPC, subnet, and security groups",
+			Value:  networkScopeMachine,
+		},
+		mcnflag.StringFlag{
 			Name:   "opentelekomcloud-vpc-name",
 			EnvVar: "OS_VPC_NAME",
 			Usage:  "OpenTelekomCloud VPC name the machine will be connected on",
@@ -263,6 +269,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 	d.FlavorName = flags.String("opentelekomcloud-flavor-name")
 	d.ImageName = flags.String("opentelekomcloud-image-name")
 	d.VpcID = managedSting{Value: flags.String("opentelekomcloud-vpc-id")}
+	d.NetworkScope = flags.String("opentelekomcloud-network-scope")
 	d.VpcName = flags.String("opentelekomcloud-vpc-name")
 	d.SubnetID = managedSting{Value: flags.String("opentelekomcloud-subnet-id")}
 	d.SubnetName = flags.String("opentelekomcloud-subnet-name")
@@ -348,7 +355,7 @@ func (d *Driver) SetConfigFromFlags(flags drivers.DriverOptions) error {
 //   - The transformation is idempotent: once qualified, the value no
 //     longer equals the bare default, so a second call is a no-op.
 func (d *Driver) qualifyDefaultNames() {
-	if d.MachineName == "" {
+	if d.MachineName == "" || d.NetworkScope == networkScopeShared {
 		return
 	}
 	suffix := "-" + d.MachineName

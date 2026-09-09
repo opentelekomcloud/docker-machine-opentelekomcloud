@@ -33,6 +33,8 @@ const (
 	defaultAuthURL          = "https://iam.eu-de.otc.t-systems.com/v3"
 	defaultVpcName          = "vpc-docker-machine"
 	defaultSubnetName       = "subnet-docker-machine"
+	networkScopeMachine     = "machine"
+	networkScopeShared      = "shared"
 	defaultVolumeSize       = 40
 	defaultVolumeType       = "SSD"
 )
@@ -101,6 +103,26 @@ func (d *Driver) resolveIDs() error {
 }
 
 func (d *Driver) checkConfig() error {
+	switch d.NetworkScope {
+	case "", networkScopeMachine:
+		// An empty value can be present in state written by older driver versions.
+	case networkScopeShared:
+		if d.VpcID.Value == "" {
+			return fmt.Errorf("shared network scope requires --opentelekomcloud-vpc-id")
+		}
+		if d.SubnetID.Value == "" {
+			return fmt.Errorf("shared network scope requires --opentelekomcloud-subnet-id")
+		}
+		if len(d.SecurityGroups) == 0 {
+			return fmt.Errorf("shared network scope requires --opentelekomcloud-sec-groups")
+		}
+		if d.ManagedSecurityGroup != "" {
+			return fmt.Errorf("shared network scope requires --opentelekomcloud-skip-default-sg")
+		}
+	default:
+		return fmt.Errorf("unsupported network scope %q: expected %q or %q", d.NetworkScope, networkScopeMachine, networkScopeShared)
+	}
+
 	if (d.KeyPairName.Value != "" && d.PrivateKeyFile == "") || (d.KeyPairName.Value == "" && d.PrivateKeyFile != "") {
 		return fmt.Errorf(errorBothOptions, "KeyPairName", "PrivateKeyFile")
 	}

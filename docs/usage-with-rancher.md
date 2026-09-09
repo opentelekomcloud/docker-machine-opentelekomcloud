@@ -43,6 +43,20 @@
 
 ### Usage of new node driver:
 
+RKE2 machine pools must use a shared, cluster-owned network. Configure every
+machine pool with the same existing VPC, subnet, and security group:
+
+* Set `networkScope` to `shared`.
+* Set `vpcId` and `subnetId` to the cluster network IDs.
+* Set `secGroups` to a cluster security group that permits node-to-node RKE2
+  and CNI traffic.
+* Enable `skipDefaultSg`.
+
+The node driver treats resources supplied in shared mode as externally managed
+and does not remove them when an individual node is deleted. The cluster-level
+provisioner that creates these resources must remove them after all cluster
+machines have been deleted.
+
 * You need to properly install the RKE2 version of driver directly in `local` cluster, so open `kubectl shell`
 * Paste:
 ```bash

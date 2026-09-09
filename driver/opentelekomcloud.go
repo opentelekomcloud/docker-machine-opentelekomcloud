@@ -50,6 +50,7 @@ type Driver struct {
 	VpcID                  managedSting `json:"vpc_id"`
 	SubnetName             string       `json:"-"`
 	SubnetID               managedSting `json:"subnet_id"`
+	NetworkScope           string       `json:"network_scope,omitempty"`
 	PrivateKeyFile         string       `json:"private_key"`
 	SecurityGroups         []string     `json:"-"`
 	SecurityGroupIDs       []string     `json:"-"`
