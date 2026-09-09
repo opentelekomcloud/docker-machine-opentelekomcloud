@@ -333,6 +333,28 @@ func (d *Driver) Remove() error {
 		}
 	}
 
+	if err := d.deleteDriverManagedNetwork(); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
+
+	// Release the EIP last so an instance deletion timeout cannot skip it and
+	// an intermittent EIP API failure cannot prevent the other cleanup steps.
+	log.Info("attempting to release OpenTelekomCloud EIP...")
+	if err := d.deleteEIP(); err != nil {
+		mErr = multierror.Append(mErr, err)
+	}
+	return mErr.ErrorOrNil()
+}
+
+func (d *Driver) deleteDriverManagedNetwork() error {
+	if d.NetworkScope == networkScopeShared {
+		log.Info("skipping shared network deletion; the cluster network controller owns its lifecycle")
+
+		return nil
+	}
+
+	mErr := &multierror.Error{}
+
 	log.Info("attempting to delete OpenTelekomCloud subnet...")
 	if err := d.deleteSubnet(); err != nil {
 		mErr = multierror.Append(mErr, err)
@@ -348,12 +370,6 @@ func (d *Driver) Remove() error {
 		mErr = multierror.Append(mErr, err)
 	}
 
-	// Release the EIP last so an instance deletion timeout cannot skip it and
-	// an intermittent EIP API failure cannot prevent the other cleanup steps.
-	log.Info("attempting to release OpenTelekomCloud EIP...")
-	if err := d.deleteEIP(); err != nil {
-		mErr = multierror.Append(mErr, err)
-	}
 	return mErr.ErrorOrNil()
 }
 
