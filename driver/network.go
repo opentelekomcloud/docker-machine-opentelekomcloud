@@ -62,23 +62,28 @@ func (d *Driver) createDefaultGroup() error {
 	if d.SSHAllowCIDR == "" {
 		log.Warnf("default security group allows SSH ingress from 0.0.0.0/0; set --opentelekomcloud-ssh-allow-cidr to restrict access")
 	}
-	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup,
-		services.PortRange{From: d.SSHPort, CIDR: d.SSHAllowCIDR},
-		services.PortRange{From: dockerPort},
-		services.PortRange{From: dockerEtcdPort},
-		services.PortRange{From: dockerEtcdPeerPort},
-		services.PortRange{From: dockerNodesPort},
-		services.PortRange{From: dockerNginxPort},
-		services.PortRange{From: dockerVXLANPort},
-		services.PortRange{From: dockerProbesPort},
-		services.PortRange{From: dockerMetricsServerPort},
-		services.PortRange{From: dockerIngressProbesPort},
-	)
+	sg, err := d.client.CreateSecurityGroup(d.ManagedSecurityGroup, d.defaultSecurityGroupPorts()...)
 	if err != nil {
 		return fmt.Errorf("fail creating default security group: %s", logHTTP500(err))
 	}
 	d.ManagedSecurityGroupID = sg.ID
 	return nil
+}
+
+func (d *Driver) defaultSecurityGroupPorts() []services.PortRange {
+	return []services.PortRange{
+		services.PortRange{From: d.SSHPort, CIDR: d.SSHAllowCIDR},
+		services.PortRange{From: dockerPort},
+		services.PortRange{From: dockerEtcdPort},
+		services.PortRange{From: dockerEtcdPeerPort},
+		services.PortRange{From: dockerNodesPort},
+		services.PortRange{From: rke2SupervisorPort},
+		services.PortRange{From: dockerNginxPort},
+		services.PortRange{From: dockerVXLANPort},
+		services.PortRange{From: dockerProbesPort},
+		services.PortRange{From: dockerMetricsServerPort},
+		services.PortRange{From: dockerIngressProbesPort},
+	}
 }
 
 func (d *Driver) createElasticIP() error {

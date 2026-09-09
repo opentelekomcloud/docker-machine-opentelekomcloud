@@ -18,6 +18,7 @@ const (
 	dockerEtcdPort          = 2379
 	dockerEtcdPeerPort      = 2380
 	dockerNodesPort         = 6443
+	rke2SupervisorPort      = 9345
 	dockerNginxPort         = 8443
 	dockerVXLANPort         = 8472
 	dockerProbesPort        = 9099
