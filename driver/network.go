@@ -72,17 +72,17 @@ func (d *Driver) createDefaultGroup() error {
 
 func (d *Driver) defaultSecurityGroupPorts() []services.PortRange {
 	return []services.PortRange{
-		services.PortRange{From: d.SSHPort, CIDR: d.SSHAllowCIDR},
-		services.PortRange{From: dockerPort},
-		services.PortRange{From: dockerEtcdPort},
-		services.PortRange{From: dockerEtcdPeerPort},
-		services.PortRange{From: dockerNodesPort},
-		services.PortRange{From: rke2SupervisorPort},
-		services.PortRange{From: dockerNginxPort},
-		services.PortRange{From: dockerVXLANPort},
-		services.PortRange{From: dockerProbesPort},
-		services.PortRange{From: dockerMetricsServerPort},
-		services.PortRange{From: dockerIngressProbesPort},
+		{From: d.SSHPort, CIDR: d.SSHAllowCIDR},
+		{From: dockerPort},
+		{From: dockerEtcdPort},
+		{From: dockerEtcdPeerPort},
+		{From: dockerNodesPort},
+		{From: rke2SupervisorPort},
+		{From: dockerNginxPort},
+		{From: dockerVXLANPort},
+		{From: dockerProbesPort},
+		{From: dockerMetricsServerPort},
+		{From: dockerIngressProbesPort},
 	}
 }
 
