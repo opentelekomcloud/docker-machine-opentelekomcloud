@@ -25,6 +25,7 @@ func TestDriver_SetConfigFromFlags(t *testing.T) {
 	assert.Equal(t, defaultSecurityGroup+"-test-machine", driver.ManagedSecurityGroup)
 	assert.Equal(t, defaultVpcName+"-test-machine", driver.VpcName)
 	assert.Equal(t, defaultSubnetName+"-test-machine", driver.SubnetName)
+	assert.Equal(t, networkScopeMachine, driver.NetworkScope)
 	assert.Equal(t, defaultFlavor, driver.FlavorName)
 	assert.Equal(t, defaultImage, driver.ImageName)
 	assert.Empty(t, flags.InvalidFlags)
@@ -59,6 +60,104 @@ func TestDriver_SetConfigFromFlagsPreservesExplicitNames(t *testing.T) {
 	require.NoError(t, driver.SetConfigFromFlags(flags))
 	assert.Equal(t, "my-custom-vpc", driver.VpcName)
 	assert.Equal(t, "my-custom-subnet", driver.SubnetName)
+}
+
+func TestDriver_SetConfigFromFlagsSharedNetwork(t *testing.T) {
+	driver := NewDriver("my-rancher-node", "path")
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-cloud":           "test-cloud",
+			"opentelekomcloud-network-scope":   networkScopeShared,
+			"opentelekomcloud-vpc-id":          "vpc-id",
+			"opentelekomcloud-subnet-id":       "subnet-id",
+			"opentelekomcloud-sec-groups":      "cluster-security-group",
+			"opentelekomcloud-skip-default-sg": true,
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+
+	require.NoError(t, driver.SetConfigFromFlags(flags))
+	assert.Equal(t, networkScopeShared, driver.NetworkScope)
+	assert.Equal(t, defaultVpcName, driver.VpcName)
+	assert.Equal(t, defaultSubnetName, driver.SubnetName)
+	assert.Empty(t, driver.ManagedSecurityGroup)
+	assert.Equal(t, []string{"cluster-security-group"}, driver.SecurityGroups)
+	assert.False(t, driver.VpcID.DriverManaged)
+	assert.False(t, driver.SubnetID.DriverManaged)
+}
+
+func TestDriver_SetConfigFromFlagsSharedNetworkValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		values        map[string]interface{}
+		expectedError string
+	}{
+		{
+			name: "missing VPC ID",
+			values: map[string]interface{}{
+				"opentelekomcloud-subnet-id":       "subnet-id",
+				"opentelekomcloud-sec-groups":      "cluster-security-group",
+				"opentelekomcloud-skip-default-sg": true,
+			},
+			expectedError: "shared network scope requires --opentelekomcloud-vpc-id",
+		},
+		{
+			name: "missing subnet ID",
+			values: map[string]interface{}{
+				"opentelekomcloud-vpc-id":          "vpc-id",
+				"opentelekomcloud-sec-groups":      "cluster-security-group",
+				"opentelekomcloud-skip-default-sg": true,
+			},
+			expectedError: "shared network scope requires --opentelekomcloud-subnet-id",
+		},
+		{
+			name: "missing security groups",
+			values: map[string]interface{}{
+				"opentelekomcloud-vpc-id":          "vpc-id",
+				"opentelekomcloud-subnet-id":       "subnet-id",
+				"opentelekomcloud-skip-default-sg": true,
+			},
+			expectedError: "shared network scope requires --opentelekomcloud-sec-groups",
+		},
+		{
+			name: "default security group enabled",
+			values: map[string]interface{}{
+				"opentelekomcloud-vpc-id":     "vpc-id",
+				"opentelekomcloud-subnet-id":  "subnet-id",
+				"opentelekomcloud-sec-groups": "cluster-security-group",
+			},
+			expectedError: "shared network scope requires --opentelekomcloud-skip-default-sg",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			driver := NewDriver("my-rancher-node", "path")
+			values := map[string]interface{}{
+				"opentelekomcloud-cloud":         "test-cloud",
+				"opentelekomcloud-network-scope": networkScopeShared,
+			}
+			for key, value := range test.values {
+				values[key] = value
+			}
+			flags := &drivers.CheckDriverOptions{FlagsValues: values, CreateFlags: driver.GetCreateFlags()}
+
+			require.EqualError(t, driver.SetConfigFromFlags(flags), test.expectedError)
+		})
+	}
+}
+
+func TestDriver_SetConfigFromFlagsRejectsInvalidNetworkScope(t *testing.T) {
+	driver := NewDriver("test-machine", "path")
+	flags := &drivers.CheckDriverOptions{
+		FlagsValues: map[string]interface{}{
+			"opentelekomcloud-cloud":         "test-cloud",
+			"opentelekomcloud-network-scope": "invalid",
+		},
+		CreateFlags: driver.GetCreateFlags(),
+	}
+
+	require.EqualError(t, driver.SetConfigFromFlags(flags), `unsupported network scope "invalid": expected "machine" or "shared"`)
 }
 
 func TestDriver_QualifyDefaultNamesIsIdempotent(t *testing.T) {
