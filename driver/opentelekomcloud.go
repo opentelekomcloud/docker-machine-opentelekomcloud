@@ -42,6 +42,7 @@ type Driver struct {
 	EndpointType           string       `json:"endpoint_type,omitempty"`
 	SSHAllowCIDR           string       `json:"ssh_allow_cidr,omitempty"`
 	InstanceID             string       `json:"instance_id"`
+	PrivateIPAddress       string       `json:"PrivateIPAddress,omitempty"`
 	FlavorName             string       `json:"-"`
 	FlavorID               string       `json:"-"`
 	ImageName              string       `json:"-"`
@@ -250,6 +251,9 @@ func (d *Driver) Create() error {
 	if err := d.createInstance(); err != nil {
 		return err
 	}
+	if err := d.lookForPrivateIPAddress(); err != nil {
+		return d.failedToCreate(err)
+	}
 	if d.skipEIPCreation {
 		log.Info("assign to OpenTelekomCloud instance local IP...")
 		if err := d.useLocalIP(); err != nil {
@@ -265,6 +269,27 @@ func (d *Driver) Create() error {
 		return d.failedToCreate(err)
 	}
 	return nil
+}
+
+func (d *Driver) lookForPrivateIPAddress() error {
+	if d.PrivateIPAddress != "" {
+		return nil
+	}
+
+	for retryCount := 0; retryCount < 5; retryCount++ {
+		ip, err := d.client.GetServerFixedIP(d.InstanceID)
+		if err == nil && ip != "" {
+			d.PrivateIPAddress = ip
+			log.Debug("Private IP address found", map[string]string{
+				"IP":        ip,
+				"MachineId": d.InstanceID,
+			})
+			return nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+
+	return fmt.Errorf("no private IP found for the machine")
 }
 
 func (d *Driver) failedToCreate(err error) error {
