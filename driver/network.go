@@ -111,14 +111,16 @@ func (d *Driver) useLocalIP() error {
 	}
 	for _, addrPool := range instance.Addresses {
 		addrDetails := addrPool.([]interface{})[0].(map[string]interface{})
+		localIP := addrDetails["addr"].(string)
 		d.ElasticIP = managedSting{
-			Value:         addrDetails["addr"].(string),
+			Value:         localIP,
 			DriverManaged: false,
 		}
+		d.PrivateIPAddress = localIP
+		d.IPAddress = localIP
 		return nil
 	}
-	d.IPAddress = d.ElasticIP.Value
-	return nil
+	return fmt.Errorf("no fixed IP found for the machine")
 }
 
 func (d *Driver) deleteVPC() error {

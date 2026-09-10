@@ -157,6 +157,7 @@ func TestDriver_Create(t *testing.T) {
 			}()
 			require.NoError(sub, driver.Authenticate())
 			require.NoError(sub, driver.Create())
+			assert.NotEmpty(sub, driver.PrivateIPAddress)
 			assert.NoError(sub, driver.Remove())
 		})
 	}
