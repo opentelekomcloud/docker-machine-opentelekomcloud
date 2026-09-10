@@ -1,6 +1,6 @@
 module github.com/opentelekomcloud/docker-machine-opentelekomcloud
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/apparentlymart/go-cidr v1.1.0
@@ -9,7 +9,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.0
 	github.com/opentelekomcloud/gophertelekomcloud v0.9.10-0.20260908094326-042aed21108b
 	github.com/stretchr/testify v1.7.1
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.52.0
 )
 
 require (
@@ -19,8 +19,8 @@ require (
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/term v0.43.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
