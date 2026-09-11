@@ -60,10 +60,10 @@ machines have been deleted.
 * You need to properly install the RKE2 version of driver directly in `local` cluster, so open `kubectl shell`
 * Paste:
 ```bash
-  cat <<EOF | kubectl apply -f -
-  apiVersion: management.cattle.io/v3
-  kind: NodeDriver
-  metadata:
+cat <<EOF | kubectl apply -f -
+apiVersion: management.cattle.io/v3
+kind: NodeDriver
+metadata:
   name: opentelekomcloud
   annotations:
     field.cattle.io/description: "Open Telekom Cloud node driver"
@@ -76,5 +76,5 @@ spec:
   addCloudCredential: true
   displayName: "OpenTelekomCloud"
   url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
-  EOF
+EOF
 ```
