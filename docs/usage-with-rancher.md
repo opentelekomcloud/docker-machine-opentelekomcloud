@@ -57,6 +57,12 @@ and does not remove them when an individual node is deleted. The cluster-level
 provisioner that creates these resources must remove them after all cluster
 machines have been deleted.
 
+When a legacy single-node cluster is migrated to shared mode, the network
+controller may adopt the network originally created by that machine. During
+replacement of the original node, the driver checks the subnet for other
+compute ports and leaves the adopted VPC, subnet, and security group intact.
+Final cleanup then belongs to the cluster network controller.
+
 * You need to properly install the RKE2 version of driver directly in `local` cluster, so open `kubectl shell`
 * Paste:
 ```bash
@@ -64,17 +70,17 @@ cat <<EOF | kubectl apply -f -
 apiVersion: management.cattle.io/v3
 kind: NodeDriver
 metadata:
- name: opentelekomcloud
- annotations:
-   field.cattle.io/description: "Open Telekom Cloud node driver"
-   lifecycle.cattle.io/create.node-driver-controller: "true"
-   passwordFields: "password"
-   privateCredentialFields: "password"
-   publicCredentialFields: "username,domainName,projectName,region,authUrl"
+  name: opentelekomcloud
+  annotations:
+    field.cattle.io/description: "Open Telekom Cloud node driver"
+    lifecycle.cattle.io/create.node-driver-controller: "true"
+    passwordFields: "password"
+    privateCredentialFields: "password"
+    publicCredentialFields: "username,domainName,projectName,region,authUrl"
 spec:
- active: true
- addCloudCredential: true
- displayName: "OpenTelekomCloud"
- url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
+  active: true
+  addCloudCredential: true
+  displayName: "OpenTelekomCloud"
+  url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
 EOF
 ```
