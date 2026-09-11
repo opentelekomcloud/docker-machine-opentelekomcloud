@@ -2,13 +2,16 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
+	vpcsubnets "github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/subnets"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/layer3/floatingips"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/lbaas_v2/listeners"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/lbaas_v2/loadbalancers"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/lbaas_v2/monitors"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/extensions/lbaas_v2/pools"
+	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v2/ports"
 )
 
 // LBStateActive default
@@ -25,6 +28,39 @@ func (c *Client) InitNetworkV2() error {
 	}
 	c.NetworkV2 = nw
 	return nil
+}
+
+// AttachedComputePorts returns the number of compute ports attached to the
+// Neutron network backing a VPC subnet, excluding one server when requested.
+// It is used to avoid deleting a machine-created network after that network
+// has been adopted by a cluster.
+func (c *Client) AttachedComputePorts(subnetID, excludeDeviceID string) (int, error) {
+	subnet, err := vpcsubnets.Get(c.VPC, subnetID).Extract()
+	if err != nil {
+		return 0, err
+	}
+	if subnet.NetworkID == "" {
+		return 0, fmt.Errorf("subnet %s does not expose a Neutron network ID", subnetID)
+	}
+	page, err := ports.List(c.NetworkV2, ports.ListOpts{NetworkID: subnet.NetworkID}).AllPages()
+	if err != nil {
+		return 0, err
+	}
+	values, err := ports.ExtractPorts(page)
+	if err != nil {
+		return 0, err
+	}
+	return countAttachedComputePorts(values, excludeDeviceID), nil
+}
+
+func countAttachedComputePorts(values []ports.Port, excludeDeviceID string) int {
+	count := 0
+	for _, port := range values {
+		if strings.HasPrefix(port.DeviceOwner, "compute:") && port.DeviceID != excludeDeviceID {
+			count++
+		}
+	}
+	return count
 }
 
 // CreateLoadBalancer creating new ELBv2
