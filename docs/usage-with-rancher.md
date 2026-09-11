@@ -64,17 +64,17 @@ cat <<EOF | kubectl apply -f -
 apiVersion: management.cattle.io/v3
 kind: NodeDriver
 metadata:
- name: opentelekomcloud
- annotations:
-   field.cattle.io/description: "Open Telekom Cloud node driver"
-   lifecycle.cattle.io/create.node-driver-controller: "true"
-   passwordFields: "password"
-   privateCredentialFields: "password"
-   publicCredentialFields: "username,domainName,projectName,region,authUrl"
+  name: opentelekomcloud
+  annotations:
+    field.cattle.io/description: "Open Telekom Cloud node driver"
+    lifecycle.cattle.io/create.node-driver-controller: "true"
+    passwordFields: "password"
+    privateCredentialFields: "password"
+    publicCredentialFields: "username,domainName,projectName,region,authUrl"
 spec:
- active: true
- addCloudCredential: true
- displayName: "OpenTelekomCloud"
- url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
+  active: true
+  addCloudCredential: true
+  displayName: "OpenTelekomCloud"
+  url: "https://otc-rancher.obs.eu-de.otc.t-systems.com/node/driver/latest/docker-machine-driver-opentelekomcloud_linux_amd64.tar.gz"
 EOF
 ```
