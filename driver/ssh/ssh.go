@@ -1,5 +1,5 @@
 /*
-   Ported from "github.com/docker/machine/libmachine/ssh"
+   Ported from "github.com/rancher/machine/libmachine/ssh"
 */
 
 /*

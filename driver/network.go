@@ -3,10 +3,10 @@ package opentelekomcloud
 import (
 	"fmt"
 
-	"github.com/docker/machine/libmachine/log"
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
+	"github.com/rancher/machine/libmachine/log"
 )
 
 func (d *Driver) initNetwork() error {
