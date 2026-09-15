@@ -8,13 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/machine/libmachine/drivers"
-	"github.com/docker/machine/libmachine/log"
-	"github.com/docker/machine/libmachine/mcnutils"
-	"github.com/docker/machine/libmachine/state"
 	"github.com/hashicorp/go-multierror"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack"
+	"github.com/rancher/machine/libmachine/drivers"
+	"github.com/rancher/machine/libmachine/log"
+	"github.com/rancher/machine/libmachine/mcnutils"
+	"github.com/rancher/machine/libmachine/state"
 )
 
 type managedSting struct {
@@ -376,6 +376,23 @@ func (d *Driver) deleteDriverManagedNetwork() error {
 		log.Info("skipping shared network deletion; the cluster network controller owns its lifecycle")
 
 		return nil
+	}
+	if d.SubnetID.DriverManaged && d.SubnetID.Value != "" {
+		if err := d.initNetwork(); err != nil {
+			return err
+		}
+		if err := d.client.InitNetworkV2(); err != nil {
+			return fmt.Errorf("failed to initialize NetworkV2 service before network cleanup: %s", logHTTP500(err))
+		}
+		attached, err := d.client.AttachedComputePorts(d.SubnetID.Value, d.InstanceID)
+		if err != nil {
+			return fmt.Errorf("failed to check whether network is shared before cleanup: %s", logHTTP500(err))
+		}
+		if attached > 0 {
+			log.Infof("skipping machine network deletion because %d other compute port(s) remain; a cluster network controller may have adopted it", attached)
+
+			return nil
+		}
 	}
 
 	mErr := &multierror.Error{}

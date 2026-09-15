@@ -57,6 +57,12 @@ and does not remove them when an individual node is deleted. The cluster-level
 provisioner that creates these resources must remove them after all cluster
 machines have been deleted.
 
+When a legacy single-node cluster is migrated to shared mode, the network
+controller may adopt the network originally created by that machine. During
+replacement of the original node, the driver checks the subnet for other
+compute ports and leaves the adopted VPC, subnet, and security group intact.
+Final cleanup then belongs to the cluster network controller.
+
 * You need to properly install the RKE2 version of driver directly in `local` cluster, so open `kubectl shell`
 * Paste:
 ```bash

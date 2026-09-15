@@ -7,13 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/docker/machine/libmachine/log"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/services"
 	"github.com/opentelekomcloud/docker-machine-opentelekomcloud/driver/ssh"
 	golangsdk "github.com/opentelekomcloud/gophertelekomcloud"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/common/pointerto"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/ecs/v1/cloudservers"
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
+	"github.com/rancher/machine/libmachine/log"
 )
 
 func (d *Driver) initCompute() error {

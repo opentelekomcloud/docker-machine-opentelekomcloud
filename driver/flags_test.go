@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/docker/machine/libmachine/drivers"
+	"github.com/rancher/machine/libmachine/drivers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
