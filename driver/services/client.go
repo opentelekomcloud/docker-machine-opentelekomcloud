@@ -59,7 +59,15 @@ func (c *Client) Authenticate() error {
 	)
 
 	if c.cloud != nil {
-		providerClient, err = openstack.AuthenticatedClientFromCloud(c.cloud)
+		var authOptions golangsdk.AuthOptionsProvider
+		authOptions, err = openstack.AuthOptionsFromInfo(&c.cloud.AuthInfo, c.cloud.AuthType)
+		if err == nil {
+			if options, ok := authOptions.(golangsdk.AuthOptions); ok {
+				options.AllowReauth = true
+				authOptions = options
+			}
+			providerClient, err = openstack.AuthenticatedClient(authOptions)
+		}
 	} else {
 		var ao golangsdk.AuthOptions
 		ao, err = openstack.AuthOptionsFromEnv()
