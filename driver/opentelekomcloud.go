@@ -448,7 +448,32 @@ func (d *Driver) DriverName() string {
 
 // GetSSHHostname - get ssh hostname
 func (d *Driver) GetSSHHostname() (string, error) {
-	return d.GetIP()
+	if d.NetworkScope != networkScopeShared {
+		return d.GetIP()
+	}
+	if d.skipEIPCreation {
+		return d.GetIP()
+	}
+	if d.ElasticIP.Value != "" {
+		return d.ElasticIP.Value, nil
+	}
+	// Keep compatibility with state created before the private node address was
+	// stored separately. In that state IPAddress contains the floating IP.
+	if d.IPAddress != "" && d.IPAddress != d.PrivateIPAddress {
+		return d.IPAddress, nil
+	}
+
+	if err := d.initCompute(); err != nil {
+		return "", err
+	}
+	for retryCount := 0; retryCount < 5; retryCount++ {
+		ip, err := d.client.GetServerEIP(d.InstanceID)
+		if err == nil && ip != "" {
+			return ip, nil
+		}
+		time.Sleep(2 * time.Second)
+	}
+	return "", fmt.Errorf("no SSH IP found for the machine")
 }
 
 // GetSSHPort - get ssh port
@@ -469,6 +494,14 @@ func (d *Driver) GetSSHUsername() string {
 
 // GetIP - get machine ip address
 func (d *Driver) GetIP() (string, error) {
+	// Shared scope is used by Rancher clusters. Rancher uses GetIP as the node
+	// address, so returning the floating IP makes RKE2 select it as the API
+	// server advertise-address. OpenStack floating IPs do not reliably support
+	// access from an instance back to its own floating IP. Stand-alone machine
+	// scope preserves the traditional public GetIP behavior.
+	if d.NetworkScope == networkScopeShared && d.PrivateIPAddress != "" {
+		return d.PrivateIPAddress, nil
+	}
 	if d.IPAddress != "" {
 		return d.IPAddress, nil
 	}
