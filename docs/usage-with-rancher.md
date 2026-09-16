@@ -74,9 +74,9 @@ metadata:
   annotations:
     field.cattle.io/description: "Open Telekom Cloud node driver"
     lifecycle.cattle.io/create.node-driver-controller: "true"
-    passwordFields: "password"
-    privateCredentialFields: "password"
-    publicCredentialFields: "username,domainName,projectName,region,authUrl"
+    passwordFields: "password,secretKey"
+    privateCredentialFields: "password,secretKey"
+    publicCredentialFields: "username,domainName,projectName,projectId,region,authUrl,authMethod,accessKey"
 spec:
   active: true
   addCloudCredential: true

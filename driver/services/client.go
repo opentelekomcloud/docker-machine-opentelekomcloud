@@ -54,34 +54,31 @@ func (c *Client) Authenticate() error {
 	}
 
 	var (
-		ao  golangsdk.AuthOptions
-		err error
+		providerClient *golangsdk.ProviderClient
+		err            error
 	)
 
 	if c.cloud != nil {
-		ai := c.cloud.AuthInfo
-		ao = golangsdk.AuthOptions{
-			IdentityEndpoint: ai.AuthURL,
-			Username:         ai.Username,
-			Password:         ai.Password,
-			DomainName:       ai.DomainName,
-			DomainID:         ai.DomainID,
-			TenantName:       ai.ProjectName,
-			TenantID:         ai.ProjectID,
-			TokenID:          ai.Token,
-			AllowReauth:      true,
+		var authOptions golangsdk.AuthOptionsProvider
+		authOptions, err = openstack.AuthOptionsFromInfo(&c.cloud.AuthInfo, c.cloud.AuthType)
+		if err == nil {
+			if options, ok := authOptions.(golangsdk.AuthOptions); ok {
+				options.AllowReauth = true
+				authOptions = options
+			}
+			providerClient, err = openstack.AuthenticatedClient(authOptions)
 		}
 	} else {
-		// Fallback to environment-based auth if no Cloud is provided.
+		var ao golangsdk.AuthOptions
 		ao, err = openstack.AuthOptionsFromEnv()
 		if err != nil {
 			return err
 		}
+		providerClient, err = openstack.AuthenticatedClient(ao)
 	}
 
-	providerClient, err := openstack.AuthenticatedClient(ao)
 	if err != nil {
-		return err
+		return fmt.Errorf("error extracting token: %s", err)
 	}
 	c.Provider = providerClient
 	c.Provider.UserAgent.Prepend(userAgent)
