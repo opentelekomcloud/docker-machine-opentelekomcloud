@@ -93,3 +93,10 @@ All variables CLI variables now prefixed with `opentelekomcloud`.
 #### With Rancher
 
 See [Rancher integration](docs/usage-with-rancher.md).
+
+For a single end-to-end walkthrough covering this driver, the
+[T-Cloud Public Rancher UI extension](https://github.com/opentelekomcloud/opentelekomcloud-node-driver-extension),
+and the
+[T-Cloud Public Rancher network controller](https://github.com/opentelekomcloud/t-cloud-public-rancher-network-controller)
+together — including screenshots — see
+[RANCHER-GETTING-STARTED.md](RANCHER-GETTING-STARTED.md).
