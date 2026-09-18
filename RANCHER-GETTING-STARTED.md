@@ -7,7 +7,7 @@ up the integration:
 | Component          | Repository                                                                                                                 | Role                                                                                                                                               |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
 | Node driver        | [docker-machine-opentelekomcloud](https://github.com/opentelekomcloud/docker-machine-opentelekomcloud) (this repo)         | Creates/deletes the compute instance (and per-machine network, in `machine` scope) for each cluster node.                                          |
-| UI extension       | [opentelekomcloud-node-driver-extension](https://github.com/opentelekomcloud/opentelekomcloud-node-driver-extension)       | Adds the Rancher Dashboard forms for cloud credentials, machine pools, and shared-network ownership (Managed/Existing).                            |
+| UI extension       | [t-cloud-public-node-driver-extension](https://github.com/opentelekomcloud/t-cloud-public-node-driver-extension)           | Adds the Rancher Dashboard forms for cloud credentials, machine pools, and shared-network ownership (Managed/Existing).                            |
 | Network controller | [t-cloud-public-rancher-network-controller](https://github.com/opentelekomcloud/t-cloud-public-rancher-network-controller) | Owns the cluster-scoped VPC/subnet/security-group (`TCloudClusterNetwork`) so a shared network survives individual node scale-up/down/replacement. |
 
 If you only need stand-alone Docker Machine usage (no Rancher), see the main
@@ -18,7 +18,7 @@ If you only need stand-alone Docker Machine usage (no Rancher), see the main
 > Your own Rancher UI may differ slightly by version, but the navigation
 > paths below match what is shown.
 
-![Rancher login](docs/images/rancher-login.png)
+![Rancher login](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/rancher-login.png)
 
 ## Table of contents
 
@@ -38,7 +38,7 @@ If you only need stand-alone Docker Machine usage (no Rancher), see the main
 
 ```
 Rancher (local mgmt cluster)
-├─ UI extension (opentelekomcloud-node-driver-extension)
+├─ UI extension (t-cloud-public-node-driver-extension)
 │    → renders cloud-credential / machine-pool / network-ownership forms
 ├─ NodeDriver "opentelekomcloud" (docker-machine-opentelekomcloud)
 │    → provisions each machine (VM, and per-machine network in "machine" scope)
@@ -72,31 +72,29 @@ networking (single legacy clusters keep working without it via `machine`
 scope).
 
 1. In Rancher, open **☰ → Cluster Management**, select the `local` cluster →
-   **Explore**.
+   **Explore**
 2. **Apps → Repositories → Create**:
-   - Name: `t-cloud-network-controller`
-   - Type: **OCI Repository**
-   - URL: `oci://ghcr.io/opentelekomcloud/charts/t-cloud-network-controller`
-   - Leave auth empty for public packages; otherwise configure Basic Auth with
-     a GitHub username + `read:packages` token (and an image pull Secret for
-     the Deployment).
+    - Name: `t-cloud-network-controller`
+    - Type: **OCI Repository**
+    - URL: `oci://ghcr.io/opentelekomcloud/charts/t-cloud-network-controller`
+    - Leave auth empty for public packages
 
    The repository list also shows the extension's `http` repository added in
    §4 — both can be registered together:
 
-   ![Repositories: t-cloud-extension and t-cloud-network-controller both Active](docs/images/controller-add-repo.png)
+   ![Repositories: t-cloud-extension and t-cloud-network-controller both Active](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/controller-add-repo.png)
 3. **Apps → Charts**, filter by `t-cloud-network-controller`, open **T-Cloud
    Network Controller → Install**.
-   - Release name: `t-cloud-network-controller`
-   - Namespace: `cattle-tcloud-system` (let Rancher create it)
-   - Keep defaults unless you need a private/mirrored image.
+    - Release name: `t-cloud-network-controller`
+    - Namespace: `cattle-tcloud-system` (let Rancher create it)
+    - Keep defaults unless you need a private/mirrored image.
 4. Verify from Rancher's Kubectl Shell (**local** cluster → the `>_` icon in
    the top toolbar):
    ```bash
    kubectl get crd tcloudclusternetworks.infrastructure.otc.t-systems.com -o wide
    kubectl -n cattle-tcloud-system get deploy,pods
    ```
-   ![kubectl shell showing the CRD and a Running/Ready controller Deployment](docs/images/kubectl-verify-controller.png)
+   ![kubectl shell showing the CRD and a Running/Ready controller Deployment](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/kubectl-verify-controller.png)
 
    Refresh the browser — the UI extension detects the CRD and enables
    **Managed** shared networking.
@@ -114,14 +112,14 @@ the UI.
    Drivers → Node Drivers**, delete the preinstalled `Open Telekom Cloud`
    entry (it conflicts with this integration). It stays listed as `Inactive`
    once safely deactivated/replaced:
-   ![Node Drivers list: legacy "Open Telekom Cloud" driver Inactive](docs/images/legacy-driver-inactive.png)
+   ![Node Drivers list: legacy "Open Telekom Cloud" driver Inactive](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/legacy-driver-inactive.png)
 2. Open `//<rancher-host>/dashboard/c/_/uiplugins` → **Manage Repositories →
    Create**, add the extension's published repository (GitHub Pages; see the
-   [extension README](https://github.com/opentelekomcloud/opentelekomcloud-node-driver-extension#releasing-an-extension)
+   [extension README](https://github.com/opentelekomcloud/t-cloud-public-node-driver-extension#releasing-an-extension)
    for the exact repo URL).
 3. Go to **Extensions**, find **T Cloud Public** / `T-Cloud Public Node Driver
    Extension`, and **Install**. Once installed it shows up under **Installed**:
-   ![Extensions: T-Cloud Public installed](docs/images/extension-installed.png)
+   ![Extensions: T-Cloud Public installed](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/extension-installed.png)
 4. Reload the UI. The T-Cloud Public forms appear when creating cloud
    credentials and RKE2 clusters.
 
@@ -165,28 +163,28 @@ opentelekomcloud** shows **Active**.
 domain, project, and auth URL. Existing
 credentials show provider `T-Cloud Public`:
 
-![Cloud Credentials list showing several "T-Cloud Public" entries](docs/images/cloud-credentials-list.png)
+![Cloud Credentials list showing several "T-Cloud Public" entries](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/cloud-credentials-list.png)
 
 ## 7. Provision an RKE2 cluster
 
 1. **☰ → Cluster Management → Clusters → Create**. The extension adds a
    **T-Cloud Public** tile alongside the other RKE2/K3s providers:
-   ![Cluster: Create provider tiles including T-Cloud Public](docs/images/cluster-create-providers.png)
+   ![Cluster: Create provider tiles including T-Cloud Public](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/cluster-create-providers.png)
 2. Select the cloud credential from step 6.
 3. Under **Cluster Network** (rendered by the UI extension), choose the
    ownership mode from **Shared Network Ownership**:
-   - **Managed — create and clean up with the controller**: the extension
-     creates a `TCloudClusterNetwork` (policy `Managed`) *before* Rancher saves
-     the cluster. Fill in the VPC/subnet CIDRs, gateway IP, and SSH allowed
-     CIDRs; the controller creates the VPC/subnet/security group and reports
-     the IDs back, and the extension copies them into every machine pool with
-     `networkScope: shared`, `skipDefaultSg: true`.
-     ![Cluster form: Managed network ownership with VPC/Subnet CIDR fields](docs/images/cluster-network-form-managed.png)
-   - **Existing — observe resources without deleting them**: pick an existing
-     VPC, Subnet, and Security Group from dropdowns; the extension creates an
-     `Observe` network object that the controller validates and tracks, but
-     never deletes.
-     ![Cluster form: Existing network ownership with VPC/Subnet/Security Group selectors](docs/images/cluster-network-form-existing.png)
+    - **Managed — create and clean up with the controller**: the extension
+      creates a `TCloudClusterNetwork` (policy `Managed`) *before* Rancher saves
+      the cluster. Fill in the VPC/subnet CIDRs, gateway IP, and SSH allowed
+      CIDRs; the controller creates the VPC/subnet/security group and reports
+      the IDs back, and the extension copies them into every machine pool with
+      `networkScope: shared`, `skipDefaultSg: true`.
+      ![Cluster form: Managed network ownership with VPC/Subnet CIDR fields](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/cluster-network-form-managed.png)
+    - **Existing — observe resources without deleting them**: pick an existing
+      VPC, Subnet, and Security Group from dropdowns; the extension creates an
+      `Observe` network object that the controller validates and tracks, but
+      never deletes.
+      ![Cluster form: Existing network ownership with VPC/Subnet/Security Group selectors](https://otc-rancher.obs.eu-de.otc.t-systems.com/helpers/cluster-network-form-existing.png)
 4. Configure machine pools (flavor, image, SSH CIDR) and node
    roles (etcd/control-plane/worker), then **Create**.
 5. Wait for the cluster network to reach `Ready=True` — Rancher shows machines
