@@ -19,9 +19,11 @@ import (
 	"github.com/opentelekomcloud/gophertelekomcloud/openstack/networking/v1/eips"
 	"github.com/rancher/machine/libmachine/drivers"
 	"github.com/rancher/machine/libmachine/log"
+	"github.com/rancher/machine/libmachine/mcnflag"
 	"github.com/rancher/machine/libmachine/ssh"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -48,6 +50,46 @@ func defaultAz() string {
 
 func defaultCloud() string {
 	return os.Getenv("OS_CLOUD")
+}
+
+func unsetEnvironmentForTest(t *testing.T, key string) {
+	t.Helper()
+
+	value, exists := os.LookupEnv(key)
+	require.NoError(t, os.Unsetenv(key))
+	t.Cleanup(func() {
+		if exists {
+			require.NoError(t, os.Setenv(key, value))
+			return
+		}
+		require.NoError(t, os.Unsetenv(key))
+	})
+}
+
+func cliFlagForEnvironmentTest(t *testing.T, source mcnflag.Flag) cli.Flag {
+	t.Helper()
+
+	switch source := source.(type) {
+	case mcnflag.StringFlag:
+		return cli.StringFlag{
+			Name: source.Name, EnvVar: source.EnvVar, Usage: source.Usage, Value: source.Value,
+		}
+	case *mcnflag.StringFlag:
+		return cliFlagForEnvironmentTest(t, *source)
+	case mcnflag.IntFlag:
+		return cli.IntFlag{
+			Name: source.Name, EnvVar: source.EnvVar, Usage: source.Usage, Value: source.Value,
+		}
+	case *mcnflag.IntFlag:
+		return cliFlagForEnvironmentTest(t, *source)
+	case mcnflag.BoolFlag:
+		return cli.BoolFlag{Name: source.Name, EnvVar: source.EnvVar, Usage: source.Usage}
+	case *mcnflag.BoolFlag:
+		return cliFlagForEnvironmentTest(t, *source)
+	default:
+		t.Fatalf("unsupported machine flag type %T", source)
+		return nil
+	}
 }
 
 func newDriverFromFlags(driverFlags map[string]interface{}) (*Driver, error) {
