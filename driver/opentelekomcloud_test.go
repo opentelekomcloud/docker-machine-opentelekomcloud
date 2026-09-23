@@ -3,8 +3,11 @@
 package opentelekomcloud
 
 import (
+	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-multierror"
@@ -129,6 +132,71 @@ func TestDriver_Auth(t *testing.T) {
 			assert.NoError(sub, err)
 		})
 	}
+}
+
+func TestDriver_AuthPasswordAliases(t *testing.T) {
+	credentials := map[string]string{}
+	for _, key := range []string{
+		"AUTH_URL", "USERNAME", "PASSWORD", "DOMAIN_NAME", "DOMAIN_ID",
+		"PROJECT_NAME", "PROJECT_ID", "REGION",
+	} {
+		value := os.Getenv("OPENTELEKOMCLOUD_" + key)
+		if value == "" {
+			value = os.Getenv("OS_" + key)
+		}
+		credentials[key] = value
+	}
+	if credentials["USERNAME"] == "" && credentials["PASSWORD"] == "" {
+		t.Skip("OPENTELEKOMCLOUD_USERNAME/PASSWORD or OS_USERNAME/PASSWORD are required")
+	}
+	for _, key := range []string{"AUTH_URL", "USERNAME", "PASSWORD", "REGION"} {
+		require.NotEmpty(t, credentials[key], "%s is required", key)
+	}
+	require.True(t, credentials["DOMAIN_NAME"] != "" || credentials["DOMAIN_ID"] != "", "domain name or ID is required")
+	require.True(t, credentials["PROJECT_NAME"] != "" || credentials["PROJECT_ID"] != "", "project name or ID is required")
+
+	// Exclude legacy credentials and alternative auth modes so only the aliases can authenticate.
+	for _, env := range os.Environ() {
+		key, _, _ := strings.Cut(env, "=")
+		if strings.HasPrefix(key, "OS_") || strings.HasPrefix(key, "OPENTELEKOMCLOUD_") ||
+			strings.HasPrefix(key, "AWS_") || strings.HasPrefix(key, "envvars_") {
+			unsetEnvironmentForTest(t, key)
+		}
+	}
+	config := filepath.Join(t.TempDir(), "clouds.json")
+	require.NoError(t, os.WriteFile(config, []byte(`{"clouds":{},"public-clouds":{}}`), 0600))
+	for _, key := range []string{"OS_CLIENT_CONFIG_FILE", "OS_CLIENT_SECURE_FILE", "OS_CLIENT_VENDOR_FILE"} {
+		t.Setenv(key, config)
+	}
+	for key, value := range credentials {
+		if value != "" {
+			t.Setenv("OPENTELEKOMCLOUD_"+key, value)
+		}
+	}
+
+	driver := NewDriver(instanceName, t.TempDir())
+	createFlags := driver.GetCreateFlags()
+	set := flag.NewFlagSet("password-aliases", flag.ContinueOnError)
+	for _, f := range createFlags {
+		cliFlagForEnvironmentTest(t, f).Apply(set)
+	}
+	require.NoError(t, set.Parse(nil))
+	values := map[string]interface{}{}
+	set.VisitAll(func(f *flag.Flag) {
+		getter, ok := f.Value.(flag.Getter)
+		require.True(t, ok)
+		values[f.Name] = getter.Get()
+	})
+	require.NoError(t, driver.SetConfigFromFlags(&drivers.CheckDriverOptions{
+		FlagsValues: values, CreateFlags: createFlags,
+	}))
+	require.Empty(t, driver.Cloud)
+	require.Empty(t, driver.AccessKey)
+	require.Empty(t, driver.SecretKey)
+	require.Empty(t, driver.Token)
+	require.NoError(t, driver.Authenticate())
+	require.NotNil(t, driver.client.Provider)
+	require.NotEmpty(t, driver.client.Provider.Token())
 }
 
 func TestDriver_Create(t *testing.T) {
