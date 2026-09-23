@@ -1,6 +1,24 @@
 #### Supported options for v2.0.x
 
-| Flag                                   | Env variable           | Default value                           | Description                                                                                                                                              |
+Every flag accepts an `OPENTELEKOMCLOUD_*` environment variable: uppercase the
+flag name, remove the leading `--`, and replace hyphens with underscores.
+For example, `--opentelekomcloud-username` accepts `OPENTELEKOMCLOUD_USERNAME`.
+This includes integer and boolean flags, and `OPENTELEKOMCLOUD_USER_DATA_RAW`,
+`OPENTELEKOMCLOUD_SKIP_EIP`, and `OPENTELEKOMCLOUD_SKIP_DEFAULT_SG`, which had no
+legacy environment variable.
+
+Existing `OS_*` names remain unchanged. Explicit CLI values take precedence;
+when both environment names have values, the legacy `OS_*` variable wins.
+Unset unused variables rather than exporting empty strings: whether an empty
+value blocks the next alias depends on the machine CLI version.
+In particular, `OS_NETWORK_ID`,
+`OS_NETWORK_NAME`, `OS_SECURITY_GROUP`, and `OS_INTERFACE` retain their names;
+their new aliases are `OPENTELEKOMCLOUD_SUBNET_ID`, `OPENTELEKOMCLOUD_SUBNET_NAME`,
+`OPENTELEKOMCLOUD_SEC_GROUPS`, and `OPENTELEKOMCLOUD_ENDPOINT_TYPE`.
+These aliases support Rancher's RKE2 cloud credential injection without
+renaming existing variables or CLI flags.
+
+| Flag                                   | Legacy env variable    | Default value                           | Description                                                                                                                                              |
 |----------------------------------------|------------------------|-----------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--opentelekomcloud-access-key`        | `OS_ACCESS_KEY`        |                                         | Access key for AK/SK auth                                                                                                                                |
 | `--opentelekomcloud-secret-key`        | `OS_SECRET_KEY`        |                                         | Secret key for AK/SK auth                                                                                                                                |
