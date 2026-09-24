@@ -36,3 +36,46 @@ func TestDriverSerializesPrivateIPAddressForRancher(t *testing.T) {
 	require.NoError(t, json.Unmarshal(data, &state))
 	assert.Equal(t, "192.168.0.10", state["PrivateIPAddress"])
 }
+
+func TestRancherUsesPrivateAddressAndSSHUsesFloatingIP(t *testing.T) {
+	driver := NewDriver("test-machine", "path")
+	driver.NetworkScope = networkScopeShared
+	driver.PrivateIPAddress = "192.168.0.10"
+	driver.IPAddress = "198.51.100.10"
+	driver.ElasticIP = managedSting{Value: "198.51.100.10", DriverManaged: true}
+
+	nodeIP, err := driver.GetIP()
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.0.10", nodeIP)
+
+	sshHostname, err := driver.GetSSHHostname()
+	require.NoError(t, err)
+	assert.Equal(t, "198.51.100.10", sshHostname)
+}
+
+func TestSSHUsesPrivateAddressWithoutFloatingIP(t *testing.T) {
+	driver := NewDriver("test-machine", "path")
+	driver.NetworkScope = networkScopeShared
+	driver.skipEIPCreation = true
+	driver.PrivateIPAddress = "192.168.0.10"
+
+	sshHostname, err := driver.GetSSHHostname()
+	require.NoError(t, err)
+	assert.Equal(t, "192.168.0.10", sshHostname)
+}
+
+func TestStandaloneMachinePreservesPublicAddress(t *testing.T) {
+	driver := NewDriver("test-machine", "path")
+	driver.NetworkScope = networkScopeMachine
+	driver.PrivateIPAddress = "192.168.0.10"
+	driver.IPAddress = "198.51.100.10"
+	driver.ElasticIP = managedSting{Value: "198.51.100.10", DriverManaged: true}
+
+	nodeIP, err := driver.GetIP()
+	require.NoError(t, err)
+	assert.Equal(t, "198.51.100.10", nodeIP)
+
+	sshHostname, err := driver.GetSSHHostname()
+	require.NoError(t, err)
+	assert.Equal(t, "198.51.100.10", sshHostname)
+}
